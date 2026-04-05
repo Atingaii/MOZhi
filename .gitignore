@@ -1,0 +1,13 @@
+/.idea/
+/mozhi-web/node_modules/
+/mozhi-web/dist/
+/mozhi-web/.vite/
+/mozhi-web/*.d.ts
+/mozhi-web/*.js
+/mozhi-web/*.tsbuildinfo
+/mozhi-backend/**/target/
+/logs/
+*.iml
+*.log
+.env
+.env.*

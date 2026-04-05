@@ -1,0 +1,216 @@
+{
+  "nodes": [
+    {
+      "id": "root",
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 360,
+      "height": 160,
+      "text": "MOZhi scaffold\\n\\nSingle repo\\nFrontend and backend split\\nDDD backend kept as one multi-module application"
+    },
+    {
+      "id": "backend",
+      "type": "file",
+      "x": 440,
+      "y": -40,
+      "width": 340,
+      "height": 90,
+      "file": "mozhi-backend/pom.xml"
+    },
+    {
+      "id": "types",
+      "type": "text",
+      "x": 860,
+      "y": -240,
+      "width": 240,
+      "height": 100,
+      "text": "mozhi-types\\nConstants, enums, exceptions, events"
+    },
+    {
+      "id": "api",
+      "type": "text",
+      "x": 860,
+      "y": -110,
+      "width": 240,
+      "height": 100,
+      "text": "mozhi-api\\nContracts and DTOs"
+    },
+    {
+      "id": "domain",
+      "type": "text",
+      "x": 860,
+      "y": 20,
+      "width": 240,
+      "height": 140,
+      "text": "mozhi-domain\\nAuth, user, content, social, commerce, ai, search, feed, counter, storage"
+    },
+    {
+      "id": "infrastructure",
+      "type": "text",
+      "x": 860,
+      "y": 190,
+      "width": 240,
+      "height": 120,
+      "text": "mozhi-infrastructure\\nRepository impl, DAO, gateway, cache, event"
+    },
+    {
+      "id": "trigger",
+      "type": "text",
+      "x": 860,
+      "y": 340,
+      "width": 240,
+      "height": 100,
+      "text": "mozhi-trigger\\nHTTP, job, listener, RPC"
+    },
+    {
+      "id": "app",
+      "type": "text",
+      "x": 860,
+      "y": 470,
+      "width": 240,
+      "height": 100,
+      "text": "mozhi-app\\nSpring Boot entry and runtime config"
+    },
+    {
+      "id": "frontend",
+      "type": "file",
+      "x": 440,
+      "y": 240,
+      "width": 340,
+      "height": 90,
+      "file": "mozhi-web/package.json"
+    },
+    {
+      "id": "devops",
+      "type": "file",
+      "x": 440,
+      "y": 390,
+      "width": 340,
+      "height": 90,
+      "file": "docs/dev-ops/docker-compose-environment.yml"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-root-backend",
+      "fromNode": "root",
+      "fromSide": "right",
+      "toNode": "backend",
+      "toSide": "left",
+      "label": "backend"
+    },
+    {
+      "id": "e-root-frontend",
+      "fromNode": "root",
+      "fromSide": "bottom",
+      "toNode": "frontend",
+      "toSide": "left",
+      "label": "frontend"
+    },
+    {
+      "id": "e-root-devops",
+      "fromNode": "root",
+      "fromSide": "bottom",
+      "toNode": "devops",
+      "toSide": "left",
+      "label": "runtime"
+    },
+    {
+      "id": "e-backend-types",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "types",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-backend-api",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "api",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-backend-domain",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "domain",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-backend-infra",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "infrastructure",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-backend-trigger",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "trigger",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-backend-app",
+      "fromNode": "backend",
+      "fromSide": "right",
+      "toNode": "app",
+      "toSide": "left",
+      "label": "module"
+    },
+    {
+      "id": "e-domain-types",
+      "fromNode": "domain",
+      "fromSide": "top",
+      "toNode": "types",
+      "toSide": "bottom",
+      "label": "depends on"
+    },
+    {
+      "id": "e-api-types",
+      "fromNode": "api",
+      "fromSide": "top",
+      "toNode": "types",
+      "toSide": "bottom",
+      "label": "depends on"
+    },
+    {
+      "id": "e-infra-domain",
+      "fromNode": "infrastructure",
+      "fromSide": "top",
+      "toNode": "domain",
+      "toSide": "bottom",
+      "label": "implements"
+    },
+    {
+      "id": "e-trigger-api",
+      "fromNode": "trigger",
+      "fromSide": "top",
+      "toNode": "api",
+      "toSide": "bottom",
+      "label": "consumes"
+    },
+    {
+      "id": "e-trigger-domain",
+      "fromNode": "trigger",
+      "fromSide": "top",
+      "toNode": "domain",
+      "toSide": "bottom",
+      "label": "routes to"
+    },
+    {
+      "id": "e-app-all",
+      "fromNode": "app",
+      "fromSide": "top",
+      "toNode": "backend",
+      "toSide": "bottom",
+      "label": "assembles"
+    }
+  ]
+}

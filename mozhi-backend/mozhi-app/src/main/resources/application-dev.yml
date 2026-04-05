@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:13306/mozhi?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 16379
+  kafka:
+    bootstrap-servers: 127.0.0.1:19092
+

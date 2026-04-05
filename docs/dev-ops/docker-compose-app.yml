@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  mozhi-app:
+    image: system/mozhi-app:1.0.0
+    container_name: mozhi-app
+    restart: on-failure
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: mozhi
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    volumes:
+      - ../../logs:/data/log
+
