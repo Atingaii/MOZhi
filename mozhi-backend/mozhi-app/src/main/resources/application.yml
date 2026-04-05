@@ -16,3 +16,8 @@ management:
 mybatis:
   mapper-locations: classpath:mybatis/mapper/*.xml
 
+mozhi:
+  web:
+    allowed-origins:
+      - http://127.0.0.1:5173
+      - http://localhost:5173

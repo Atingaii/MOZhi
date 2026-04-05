@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>cn.bugstack</groupId>
+        <groupId>cn.zy</groupId>
         <artifactId>mozhi-backend</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
@@ -15,11 +15,11 @@
 
     <dependencies>
         <dependency>
-            <groupId>cn.bugstack</groupId>
+            <groupId>cn.zy</groupId>
             <artifactId>mozhi-domain</artifactId>
         </dependency>
         <dependency>
-            <groupId>cn.bugstack</groupId>
+            <groupId>cn.zy</groupId>
             <artifactId>mozhi-types</artifactId>
         </dependency>
         <dependency>
@@ -39,6 +39,10 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
     </dependencies>
 </project>
-

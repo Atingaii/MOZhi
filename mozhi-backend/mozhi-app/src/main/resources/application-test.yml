@@ -1,13 +1,12 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1:13306/mozhi_test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
-    username: root
-    password: 123456
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:13306}/${MYSQL_TEST_DATABASE:mozhi_test}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
   data:
     redis:
-      host: 127.0.0.1
-      port: 16379
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
   kafka:
-    bootstrap-servers: 127.0.0.1:19092
-
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:19092}

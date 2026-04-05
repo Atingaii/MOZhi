@@ -15,6 +15,12 @@
 不依赖后续模块才能跑起来。
 ```
 
+## 术语与工程边界
+
+- 后端采用**单仓库 + 六模块 Maven 工程**，固定模块为：`mozhi-types`、`mozhi-api`、`mozhi-domain`、`mozhi-infrastructure`、`mozhi-trigger`、`mozhi-app`。
+- 文中提到的 `auth`、`user`、`content`、`social`、`commerce`、`storage`、`ai`、`search`、`feed`、`counter` 均指 **domain slice / bounded context**，不是新的顶层 Maven 模块。
+- 中间件统一走 **Docker Compose**，并按阶段启用；未进入对应 Phase 前，不强行拉起无关中间件。
+
 ---
 
 ## Phase 0 · 基座搭建（第 1～2 周）
@@ -25,25 +31,25 @@
 
 ### Step 0.1 — 后端 Maven 多模块工程初始化（Day 1）
 
-**做什么**：创建父 POM 和全部 13 个子模块的目录结构与空 POM，父 POM 统一管理所有第三方依赖的版本号（只声明版本，不引入实际依赖）。
+**做什么**：创建并固化六模块后端工程结构，补齐父 POM 的统一依赖管理、测试插件管理、Maven Wrapper，以及面向骨架的最小自检测试。这个 Step 不新增业务实现，只保证“工程能稳定编译、能稳定跑测试、团队无需依赖本机 Maven 差异”。
 
-**怎么验证**：在项目根目录执行 `mvn clean compile`，全部模块编译通过、零报错。
+**怎么验证**：在 `mozhi-backend/` 目录执行 `mvn clean compile` 通过；在 `mozhi-backend/` 目录使用 `mvnw.cmd -q -pl mozhi-app -am test` 通过，证明 Wrapper 和测试基线可用。
 
-### Step 0.2 — mozhi-common 公共模块（Day 2～3）
+### Step 0.2 — 共享基础能力归位（Day 2～3）
 
-**做什么**：开发统一响应体 `Result<T>`、分页包装 `PageResult<T>`、错误码枚举 `ErrorCode`、业务异常 `BizException`、全局异常处理器、实体基类、领域事件基类、Redis Key 常量、Kafka Topic 常量、业务断言工具类。
+**做什么**：将共享基础能力按现有六模块归位：`mozhi-types` 放枚举、异常、事件、常量；`mozhi-trigger`/`mozhi-app` 放统一响应体、全局异常处理器和 Web 层公共配置；避免再新增一个脱离现有骨架的 `mozhi-common` 模块。
 
-**怎么验证**：为 `Result`、`ErrorCode`、`AssertUtil` 编写单元测试。在任意子模块中引入 `mozhi-common` 依赖，确认能正常 import 和使用。
+**怎么验证**：为共享类型和公共工具编写单元测试；在 `mozhi-trigger` 与 `mozhi-app` 中引入相关能力后，编译与测试均通过。
 
 ### Step 0.3 — Docker Compose 中间件环境（Day 4～5）
 
-**做什么**：编写 `docker-compose.yml`，编排 MySQL 8.x、Redis 7.x、Kafka（KRaft 模式，无 Zookeeper）、Elasticsearch 8.x、MinIO、Milvus、Canal。每个中间件配置健康检查。编写 MySQL 初始化脚本，自动创建 6 个业务库（`mozhi_user`、`mozhi_auth`、`mozhi_content`、`mozhi_social`、`mozhi_commerce`、`mozhi_strategy`）。
+**做什么**：维护 `docs/dev-ops/docker-compose-environment.yml`，通过 Docker 提供本地开发所需中间件。Phase 0 先保障 `MySQL + Redis + MinIO + Kafka` 可用；`Elasticsearch`、`Milvus`、`Canal` 在进入搜索、RAG、Outbox 链路 Phase 时再追加到 Compose 文件。编写 MySQL 初始化脚本，自动创建业务库。
 
-**怎么验证**：执行 `docker-compose up -d`，等待全部容器健康。逐一验证：MySQL 可连接且 6 个库已存在；Redis `PING` 返回 `PONG`；Kafka 能创建和消费测试 Topic；ES `GET /_cluster/health` 返回 green/yellow；MinIO 控制台 `localhost:9001` 可登录；Milvus 健康检查通过。
+**怎么验证**：执行 `docker compose -f docs/dev-ops/docker-compose-environment.yml up -d`，等待容器启动。逐一验证：MySQL 可连接且业务库已存在；Redis `PING` 返回 `PONG`；Kafka 能创建和消费测试 Topic；MinIO 控制台可登录。未进入当前 Phase 的中间件不作为阻塞项。
 
 ### Step 0.4 — 数据库版本管理（Day 5）
 
-**做什么**：引入 Flyway，在每个业务子模块的 `resources/db/migration/` 下规划迁移脚本目录。Phase 0 只放一个占位迁移文件（如 `V1__init.sql` 内容为注释），后续每个 Phase 按需添加建表脚本。
+**做什么**：引入 Flyway，并统一放在 `mozhi-app/src/main/resources/db/migration/` 下按业务库或上下文分目录管理。Phase 0 只放占位迁移文件和目录约定，后续各 Phase 按需追加建表脚本。
 
 **怎么验证**：启动一个最简单的 Spring Boot Application，Flyway 自动执行迁移，`flyway_schema_history` 表中有记录。
 
@@ -55,9 +61,9 @@
 
 ### Step 0.6 — 前后端联调基础设施（Day 8）
 
-**做什么**：在后端 Gateway 或任一子模块中配置 CORS 跨域允许。编写一个 `GET /api/health` 健康检查接口，返回 `Result.ok("mozhi is alive")`。前端 Axios 实例配置 `baseURL`，调用此接口。引入 SpringDoc OpenAPI，配置 Swagger UI 访问路径。
+**做什么**：在 `mozhi-app` + `mozhi-trigger` 的现有骨架中配置 CORS。编写一个 `GET /api/health` 健康检查接口，返回统一响应。前端 Axios 实例配置 `baseURL`，调用此接口。引入 SpringDoc OpenAPI，配置 Swagger UI。
 
-**怎么验证**：前端页面加载后成功调用后端健康检查接口并展示返回数据。浏览器访问 `localhost:8080/swagger-ui.html` 可看到 API 文档界面。
+**怎么验证**：前端页面加载后成功调用后端健康检查接口并展示返回数据。浏览器访问 `http://localhost:8090/swagger-ui/index.html` 可看到 API 文档界面。
 
 ### Step 0.7 — Git 规范与自检（Day 8）
 
@@ -69,7 +75,8 @@
 
 ```
 □  mvn clean compile 全部模块通过
-□  docker-compose up -d 全部中间件健康运行
+□  在 `mozhi-backend/` 目录执行 `mvnw.cmd -q -pl mozhi-app -am test` 通过
+□  `docker compose -f docs/dev-ops/docker-compose-environment.yml up -d` 可拉起当前 Phase 所需中间件
 □  前端 npm run dev 可看到布局骨架
 □  前端成功调用后端 /api/health 接口
 □  Swagger UI 可访问
@@ -104,7 +111,7 @@
 
 ### Step 1.4 — 用户域：个人资料与头像上传（Day 7～8）
 
-**做什么**：实现 `PUT /api/user/profile`（修改昵称、简介）。引入 mozhi-storage 模块，实现 MinIO 预签名上传服务。实现 `POST /api/user/avatar/presign`（返回预签名 URL）。前端对接头像上传（请求预签名 → 直传 MinIO → 回调确认 → 更新 avatar_url）。
+**做什么**：实现 `PUT /api/user/profile`（修改昵称、简介）。在现有六模块骨架内落地 `storage` 子域，实现 MinIO 预签名上传服务。实现 `POST /api/user/avatar/presign`（返回预签名 URL）。前端对接头像上传（请求预签名 → 直传 MinIO → 回调确认 → 更新 avatar_url）。
 
 **怎么测试**：调用预签名接口获得 URL → 用 curl 模拟 PUT 上传文件到 MinIO → 在 MinIO 控制台确认文件存在。前端上传头像 → 个人资料页展示新头像。
 
