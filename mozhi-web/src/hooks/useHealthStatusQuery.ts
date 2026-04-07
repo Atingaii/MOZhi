@@ -7,6 +7,7 @@ export function useHealthStatusQuery() {
     queryKey: ["health-status"],
     queryFn: ({ signal }) => fetchHealthStatus(signal),
     staleTime: 30_000,
-    retry: 1
+    retry: false,
+    refetchOnWindowFocus: false
   });
 }

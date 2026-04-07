@@ -1,8 +1,11 @@
 package cn.zy.mozhi.app;
 
+import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordEncoderPort;
+import cn.zy.mozhi.domain.user.adapter.repository.IUserRepository;
 import cn.zy.mozhi.types.enums.ResponseCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(
         classes = Application.class,
         properties = {
+                "mozhi.mybatis.enabled=false",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                         + "org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
@@ -31,6 +35,12 @@ class HttpSurfaceIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private IUserRepository userRepository;
+
+    @MockBean
+    private IUserPasswordEncoderPort userPasswordEncoderPort;
 
     @Test
     void should_expose_health_endpoint_with_unified_response() throws Exception {

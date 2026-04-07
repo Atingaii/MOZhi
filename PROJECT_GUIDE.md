@@ -159,6 +159,15 @@ cd F:\new_opint\VibeCoding\MOZhi
 - 后端健康检查：`http://127.0.0.1:8090/actuator/health`
 - 日志目录：[logs](./logs)
 
+如果要验证真实 MinIO 头像直传链路，而不是本地 mock fallback，可在启动前设置：
+
+```powershell
+$env:MOZHI_STORAGE_MINIO_ENABLED = "true"
+.\docs\dev-ops\app\start.ps1
+```
+
+在这个模式下，启动脚本会自动初始化 `mozhi-assets` bucket，并开启公开读权限。
+
 ### 3. 启动前端
 
 进入前端目录：
@@ -182,6 +191,39 @@ npx vite --host 127.0.0.1 --port 5173
 访问地址：
 
 - 前端本地地址：`http://127.0.0.1:5173/`
+
+## 认证会话模型
+
+当前认证链路已经切到 cookie session 模型：
+
+- `accessToken` 只保存在前端内存态，用于当前页面请求附带 `Authorization: Bearer ...`
+- `refreshToken` 不再写入前端持久化存储，而是由后端通过 `mozhi_refresh_token` `HttpOnly` Cookie 下发
+- 页面刷新后，前端会先触发 `/api/auth/refresh` 做 silent bootstrap，再决定是否进入受保护路由
+- 登出会清理内存中的 `accessToken`，并让后端清空 refresh cookie
+
+## 认证安全开关
+
+后端运行时与认证安全相关的主要环境变量如下：
+
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `MOZHI_AUTH_COOKIE_SECURE` | refresh cookie 是否带 `Secure` | `false` |
+| `MOZHI_AUTH_CHALLENGE_PROVIDER` | challenge provider，当前支持本地 `noop` | `noop` |
+| `MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN` | `noop` provider 的通过口令 | `dev-pass` |
+
+本地开发通常保持：
+
+```powershell
+$env:MOZHI_AUTH_COOKIE_SECURE = "false"
+```
+
+如果要验证 challenge 升级链路，在本地 `noop` provider 下可使用：
+
+```text
+dev-pass
+```
+
+生产环境不应继续使用 `noop` provider。
 
 ## 本地服务与端口
 
@@ -228,6 +270,13 @@ npm run lint
 ```powershell
 cd .\mozhi-web
 npm run build
+```
+
+运行测试：
+
+```powershell
+cd .\mozhi-web
+npm run test -- --run
 ```
 
 ## 文档索引

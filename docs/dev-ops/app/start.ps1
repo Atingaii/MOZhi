@@ -30,6 +30,29 @@ function Test-Java21Home {
     return ($versionOutput | Select-String 'version "21\.').Count -gt 0
 }
 
+function Initialize-MinioBucket {
+    $minioNetwork = docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' mozhi-minio 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $minioNetwork) {
+        throw "Unable to resolve the Docker network for mozhi-minio."
+    }
+
+    $bucket = if ([string]::IsNullOrWhiteSpace($env:MOZHI_STORAGE_MINIO_BUCKET)) { "mozhi-assets" } else { $env:MOZHI_STORAGE_MINIO_BUCKET.Trim() }
+    $accessKey = if ([string]::IsNullOrWhiteSpace($env:MOZHI_STORAGE_MINIO_ACCESS_KEY)) { "minioadmin" } else { $env:MOZHI_STORAGE_MINIO_ACCESS_KEY.Trim() }
+    $secretKey = if ([string]::IsNullOrWhiteSpace($env:MOZHI_STORAGE_MINIO_SECRET_KEY)) { "minioadmin" } else { $env:MOZHI_STORAGE_MINIO_SECRET_KEY.Trim() }
+    $mcScript = "mc alias set local http://mozhi-minio:9000 $accessKey $secretKey >/dev/null && mc mb --ignore-existing local/$bucket >/dev/null && mc anonymous set download local/$bucket >/dev/null"
+
+    for ($attempt = 0; $attempt -lt 20; $attempt++) {
+        docker run --rm --entrypoint /bin/sh --network $minioNetwork minio/mc -c $mcScript | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "MinIO bucket initialized: $bucket"
+            return
+        }
+        Start-Sleep -Seconds 2
+    }
+
+    throw "MinIO bucket initialization failed for bucket '$bucket'."
+}
+
 $javaHome = if (Test-Java21Home $env:JAVA_HOME) { $env:JAVA_HOME } elseif (Test-Java21Home $fallbackJavaHome) { $fallbackJavaHome } else { $null }
 $javaExe = if ($javaHome) { Join-Path $javaHome "bin\java.exe" } else { $null }
 
@@ -55,6 +78,10 @@ docker compose -f $composeFile up -d
 
 if ($LASTEXITCODE -ne 0) {
     throw "Docker Compose environment startup failed."
+}
+
+if ($env:MOZHI_STORAGE_MINIO_ENABLED -eq "true") {
+    Initialize-MinioBucket
 }
 
 $mysqlHealthy = $false

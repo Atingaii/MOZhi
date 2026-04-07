@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zy.mozhi.infrastructure.dao.UserDao">
+
+    <resultMap id="UserResultMap" type="cn.zy.mozhi.infrastructure.dao.po.UserPO">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="email" property="email"/>
+        <result column="password_hash" property="passwordHash"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar_url" property="avatarUrl"/>
+        <result column="bio" property="bio"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.zy.mozhi.infrastructure.dao.po.UserPO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `user` (username, email, password_hash, nickname, avatar_url, bio, status, created_at, updated_at)
+        VALUES (#{username}, #{email}, #{passwordHash}, #{nickname}, #{avatarUrl}, #{bio}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="cn.zy.mozhi.infrastructure.dao.po.UserPO">
+        UPDATE `user`
+        SET nickname = #{nickname},
+            avatar_url = #{avatarUrl},
+            bio = #{bio},
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="UserResultMap">
+        SELECT id, username, email, password_hash, nickname, avatar_url, bio, status, created_at, updated_at
+        FROM `user`
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUsername" resultMap="UserResultMap">
+        SELECT id, username, email, password_hash, nickname, avatar_url, bio, status, created_at, updated_at
+        FROM `user`
+        WHERE username = #{username}
+    </select>
+
+    <select id="selectByEmail" resultMap="UserResultMap">
+        SELECT id, username, email, password_hash, nickname, avatar_url, bio, status, created_at, updated_at
+        FROM `user`
+        WHERE email = #{email}
+    </select>
+</mapper>

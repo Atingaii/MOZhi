@@ -5,6 +5,8 @@ public enum ResponseCode {
     SUCCESS("0000", "success"),
     BAD_REQUEST("A0400", "bad request"),
     UNAUTHORIZED("A0401", "unauthorized"),
+    AUTH_CHALLENGE_REQUIRED("A0410", "auth challenge required"),
+    TOO_MANY_REQUESTS("A0429", "too many requests"),
     FORBIDDEN("A0403", "forbidden"),
     NOT_FOUND("A0404", "not found"),
     SYSTEM_ERROR("B0001", "system error");

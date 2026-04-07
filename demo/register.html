@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>创建账号 — MOZhi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fff;
+            color: #1a1a1a;
+            height: 100vh;
+            overflow: hidden; /* 禁止全局滚动 */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        /* ============================================
+            导航栏 - 保持精简
+           ============================================ */
+        .navbar {
+            height: 56px;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+        }
+
+        .navbar-inner {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-left { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 28px; height: 28px;
+            background: #1a1a1a;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 12px; font-weight: 800;
+        }
+        .logo-text { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+
+        /* ============================================
+            主容器 - 锁定高度
+           ============================================ */
+        .page-container {
+            display: flex;
+            height: calc(100vh - 56px);
+        }
+
+        /* 表单侧 */
+        .form-side {
+            flex: 1.1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .form-wrapper {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        /* 品牌侧 */
+        .brand-side {
+            flex: 0.9;
+            background: #fafafa;
+            border-left: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        /* ============================================
+            步骤条 - 紧凑化
+           ============================================ */
+        .steps {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 24px;
+        }
+
+        .step {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; font-weight: 500; color: #bbb;
+        }
+
+        .step.active { color: #1a1a1a; }
+        .step.done { color: #16a34a; }
+
+        .step-dot {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700;
+            border: 1.5px solid #ddd;
+        }
+
+        .step.active .step-dot { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+        .step.done .step-dot { background: #16a34a; border-color: #16a34a; color: #fff; }
+
+        .step-line { width: 24px; height: 1.5px; background: #e5e5e5; }
+        .step-line.done { background: #16a34a; }
+
+        /* ============================================
+            表单头部 - 移除徽标，减小间距
+           ============================================ */
+        .form-header { margin-bottom: 20px; }
+        .form-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 4px;
+        }
+        .form-subtitle { font-size: 13px; color: #888; }
+        .form-subtitle a { color: #1a1a1a; font-weight: 600; text-decoration: underline; }
+
+        /* ============================================
+            社交按钮
+           ============================================ */
+        .social-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .social-btn {
+            display: flex; align-items: center; justify-content: center;
+            height: 40px; border: 1px solid #e5e5e5; border-radius: 8px;
+            background: #fff; cursor: pointer; transition: all 0.2s;
+        }
+        .social-btn:hover { border-color: #ccc; background: #f9f9f9; }
+        .social-btn svg { width: 18px; height: 18px; }
+
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 16px; color: #ccc; font-size: 11px;
+        }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #eee; }
+
+        /* ============================================
+            表单字段 - 紧凑排列
+           ============================================ */
+        .form-fields { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .field-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+
+        .field-input {
+            width: 100%; height: 38px; padding: 0 12px;
+            font-size: 13px; border: 1px solid #e5e5e5; border-radius: 8px;
+            outline: none; transition: all 0.2s;
+        }
+        .field-input:focus { border-color: #1a1a1a; box-shadow: 0 0 0 3px rgba(0,0,0,0.03); }
+
+        .password-wrapper { position: relative; }
+        .password-toggle {
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: #aaa; cursor: pointer;
+        }
+
+        .password-strength { display: flex; gap: 3px; margin-top: 6px; }
+        .strength-bar { height: 2px; flex: 1; background: #eee; border-radius: 1px; transition: 0.3s; }
+        .strength-bar.weak { background: #ef4444; }
+        .strength-bar.medium { background: #f59e0b; }
+        .strength-bar.strong { background: #16a34a; }
+
+        .terms-check {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; color: #888; margin-bottom: 16px; cursor: pointer;
+        }
+        .terms-check input { width: 16px; height: 16px; accent-color: #1a1a1a; cursor: pointer; }
+
+        .submit-btn {
+            width: 100%; height: 42px; font-size: 14px; font-weight: 600;
+            color: #fff; background: #1a1a1a; border: none; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .submit-btn:hover { background: #333; transform: translateY(-1px); }
+
+        /* ============================================
+            右侧品牌内容 - 比例缩小
+           ============================================ */
+        .brand-content { max-width: 340px; text-align: center; }
+        .brand-illustration {
+            width: 240px; height: 160px;
+            background: #fff; border: 1px solid #eee; border-radius: 12px;
+            margin: 0 auto 24px; padding: 12px;
+            display: flex; flex-direction: column; gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .mini-line { height: 5px; background: #f0f0f0; border-radius: 2px; }
+        .mini-card { background: #f9f9f9; border-radius: 6px; padding: 8px; display: flex; gap: 6px; align-items: center; }
+        .mini-avatar { width: 20px; height: 20px; border-radius: 4px; background: #eee; }
+
+        .brand-quote { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+        .brand-desc { font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 24px; }
+
+        .feature-item {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 12px; color: #555; text-align: left; margin-bottom: 8px;
+        }
+        .feature-icon {
+            width: 24px; height: 24px; background: #fff; border-radius: 6px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .feature-icon svg { width: 14px; height: 14px; }
+
+        /* ============================================
+            响应式适配
+           ============================================ */
+        @media (max-width: 800px) {
+            .brand-side { display: none; }
+            body { overflow-y: auto; } /* 移动端允许滚动以防内容切断 */
+            .page-container { height: auto; min-height: calc(100vh - 56px); }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="navbar-inner">
+        <a href="/" class="nav-left">
+            <div class="logo-icon">M</div>
+            <span class="logo-text">MOZhi</span>
+        </a>
+        <div class="nav-right">
+            <button style="background:none; border:none; font-size:13px; color:#666; cursor:pointer; margin-right:15px;">登录</button>
+            <button style="background:#1a1a1a; color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer;">注册</button>
+        </div>
+    </div>
+</nav>
+
+<div class="page-container">
+    <!-- 左侧：注册表单 -->
+    <div class="form-side">
+        <div class="form-wrapper">
+            <div class="steps">
+                <div class="step active" id="step1">
+                    <div class="step-dot">1</div>
+                    <span>起步</span>
+                </div>
+                <div class="step-line" id="line1"></div>
+                <div class="step" id="step2">
+                    <div class="step-dot">2</div>
+                    <span>验证</span>
+                </div>
+                <div class="step-line" id="line2"></div>
+                <div class="step" id="step3">
+                    <div class="step-dot">3</div>
+                    <span>开启</span>
+                </div>
+            </div>
+
+            <div class="form-header">
+                <h1 class="form-title">开启你的创作之旅</h1>
+                <p class="form-subtitle">已有账号？<a href="#">立即登录</a></p>
+            </div>
+
+            <!-- 社交图标行 -->
+            <div class="social-row">
+                <button class="social-btn"><svg viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></button>
+                <button class="social-btn"><svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></button>
+                <button class="social-btn"><svg viewBox="0 0 24 24" fill="#333"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg></button>
+            </div>
+
+            <div class="divider">或通过邮箱</div>
+
+            <form id="signupForm" novalidate>
+                <div class="form-fields">
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label class="field-label">用户名</label>
+                            <input type="text" id="username" class="field-input" placeholder="唯一标识" required />
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">昵称</label>
+                            <input type="text" class="field-input" placeholder="如何称呼你" />
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">邮箱地址</label>
+                        <input type="email" id="email" class="field-input" placeholder="you@example.com" required />
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">设置密码</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="password" class="field-input" placeholder="至少 8 位" required />
+                            <button type="button" class="password-toggle" id="togglePassword">👁️</button>
+                        </div>
+                        <div class="password-strength" id="strengthBars">
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                            <div class="strength-bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="terms-check">
+                    <input type="checkbox" required />
+                    <span>同意 <a href="#">服务条款</a> 与 <a href="#">隐私权政策</a></span>
+                </label>
+
+                <button type="submit" class="submit-btn" id="submitBtn">注册 MOZhi 账号</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 右侧：品牌展示 -->
+    <div class="brand-side">
+        <div class="brand-content">
+            <div class="brand-illustration">
+                <div class="mini-line" style="width:50%"></div>
+                <div class="mini-card"><div class="mini-avatar" style="background:#6366f1"></div><div style="flex:1" class="mini-line"></div></div>
+                <div class="mini-card"><div class="mini-avatar" style="background:#f97316"></div><div style="width:70%" class="mini-line"></div></div>
+                <div class="mini-card"><div class="mini-avatar" style="background:#16a34a"></div><div style="width:40%" class="mini-line"></div></div>
+            </div>
+            <p class="brand-quote">"这里是创作者和读者的<br>精神家园。"</p>
+            <div style="margin-bottom: 30px;">
+                <div class="feature-item"><div class="feature-icon">✍️</div><span>创作台：沉浸式写作与一键发布</span></div>
+                <div class="feature-item"><div class="feature-icon">🛡️</div><span>版权保护：为你的内容保驾护航</span></div>
+                <div class="feature-item"><div class="feature-icon">💰</div><span>知识商城：让你的才华产生价值</span></div>
+            </div>
+            <div class="social-proof">
+                <div class="avatar-stack">
+                    <div class="avatar" style="background:#6366f1"></div>
+                    <div class="avatar" style="background:#ec4899"></div>
+                    <div class="avatar" style="background:#f97316"></div>
+                </div>
+                <p class="proof-text">已有 <strong>2,400+</strong> 成员加入</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 密码切换
+    const passInput = document.getElementById('password');
+    document.getElementById('togglePassword').onclick = (e) => {
+        const isPass = passInput.type === 'password';
+        passInput.type = isPass ? 'text' : 'password';
+        e.target.innerText = isPass ? '🔒' : '👁️';
+    };
+
+    // 强度检测
+    passInput.oninput = () => {
+        const v = passInput.value;
+        let score = 0;
+        if (v.length >= 8) score++;
+        if (/[A-Z]/.test(v)) score++;
+        if (/[0-9]/.test(v)) score++;
+        if (/[^A-Za-z0-9]/.test(v)) score++;
+        const bars = document.querySelectorAll('.strength-bar');
+        const classes = ['', 'weak', 'medium', 'strong', 'strong'];
+        bars.forEach((b, i) => b.className = 'strength-bar' + (i < score ? ' ' + classes[score] : ''));
+    };
+
+    // 提交模拟
+    document.getElementById('signupForm').onsubmit = (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = "正在创建...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            document.getElementById('step1').classList.replace('active', 'done');
+            document.getElementById('step1').querySelector('.step-dot').innerText = '✓';
+            document.getElementById('line1').classList.add('done');
+            document.getElementById('step2').classList.add('active');
+            btn.innerText = "注册成功";
+
+            const toast = document.createElement('div');
+            toast.style = "position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#1a1a1a; color:#fff; padding:10px 20px; border-radius:8px; font-size:13px; z-index:100;";
+            toast.innerText = "演示：验证邮件已发送到你的邮箱！";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }, 1200);
+    };
+</script>
+</body>
+</html>

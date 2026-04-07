@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS `user` (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(64) NOT NULL,
+    email VARCHAR(128) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    nickname VARCHAR(64) NOT NULL,
+    avatar_url VARCHAR(512) NULL,
+    bio VARCHAR(512) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE `user`
+    ADD CONSTRAINT uk_user_username UNIQUE (username);
+
+ALTER TABLE `user`
+    ADD CONSTRAINT uk_user_email UNIQUE (email);

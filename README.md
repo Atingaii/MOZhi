@@ -66,6 +66,15 @@ MOZhi/
 - API Health: `http://127.0.0.1:8090/api/health`
 - Swagger UI: `http://127.0.0.1:8090/swagger-ui/index.html`
 
+如需验证真实 MinIO 直传头像链路，可先设置：
+
+```powershell
+$env:MOZHI_STORAGE_MINIO_ENABLED = "true"
+.\docs\dev-ops\app\start.ps1
+```
+
+启动脚本会自动初始化 `mozhi-assets` bucket，并配置公开读权限。
+
 停止命令：
 
 ```powershell
@@ -83,6 +92,22 @@ npm run dev
 默认访问地址：
 
 - Frontend: `http://127.0.0.1:5173/`
+
+## 认证会话模型
+
+- `accessToken` 只保存在前端内存，不写入 `localStorage`
+- `refreshToken` 通过 `mozhi_refresh_token` `HttpOnly` Cookie 下发
+- 前端刷新页面时会自动走 `/api/auth/refresh` 恢复会话
+- 本地开发默认 `MOZHI_AUTH_COOKIE_SECURE=false`，部署到 HTTPS 环境时应改为 `true`
+
+## 认证安全开关
+
+- `MOZHI_AUTH_COOKIE_SECURE`
+  控制 refresh cookie 是否带 `Secure`
+- `MOZHI_AUTH_CHALLENGE_PROVIDER`
+  当前默认 `noop`，用于本地联调 challenge 升级链路
+- `MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN`
+  `noop` provider 的通过口令，默认 `dev-pass`
 
 ## 文档导航
 
@@ -110,4 +135,3 @@ npm run dev
 ## License
 
 当前仓库尚未声明正式开源许可证。
-
