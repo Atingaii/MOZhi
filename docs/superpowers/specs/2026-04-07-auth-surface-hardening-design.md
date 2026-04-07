@@ -164,7 +164,7 @@ They will not initiate any OAuth redirect. This avoids lying about capability wh
 
 The password strength meter remains visible because it is part of the reference design, but its scoring will be updated to align with the real password policy:
 
-- weak: fewer than `15` chars or matches blocked pattern/list
+- weak: fewer than `8` chars or matches blocked pattern/list
 - medium: length threshold passed but entropy hints are weak
 - strong: length threshold passed and pattern diversity is healthy
 
@@ -300,11 +300,11 @@ This preserves “refresh page and continue” behavior without storing long-liv
 
 ## 7. Password Policy
 
-The product currently has no MFA, so password policy must follow the stricter no-MFA baseline.
+The product currently has no MFA. For this slice, the project will use an `8-64` character password policy and compensate with blocklist checks, rate limiting, challenge escalation, and audit coverage.
 
 ## 7.1 Registration rules
 
-- minimum length: `15`
+- minimum length: `8`
 - maximum length: `64`
 - spaces are allowed
 - no forced composition rules such as “must include uppercase/lowercase/number/symbol”
@@ -599,7 +599,7 @@ This design is complete only if all items below are true:
 - login accepts username or email
 - refresh works through `HttpOnly` cookie rotation
 - logout and logout-all still revoke sessions correctly
-- password policy enforces `15-64` chars without composition-rule theater
+- password policy enforces `8-64` chars without composition-rule theater
 - common-password blocking is active
 - rate limiting and challenge escalation are active for login/register
 - auth errors do not enumerate valid accounts
