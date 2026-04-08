@@ -19,7 +19,12 @@ describe("globals clarity tuning", () => {
   });
 
   it("keeps the auth route shell vertically centered on desktop", () => {
+    expect(globalsCss).toContain("--navbar-height: 64px;");
+    expect(globalsCss).toMatch(/\.mozhi-navbar-inner\s*\{[^}]*min-height:\s*var\(--navbar-height\);/s);
+    expect(globalsCss).toMatch(/\.mozhi-auth-route-shell\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
     expect(globalsCss).toMatch(/\.mozhi-auth-route-main\s*\{[^}]*display:\s*flex;/s);
+    expect(globalsCss).toMatch(/\.mozhi-auth-route-main\s*\{[^}]*flex:\s*1 1 auto;/s);
+    expect(globalsCss).not.toMatch(/\.mozhi-auth-route-main\s*\{[^}]*height:\s*calc\(100vh - var\(--navbar-height\)\);/s);
     expect(globalsCss).toMatch(/\.mozhi-auth-route-main\s*\{[^}]*align-items:\s*center;/s);
     expect(globalsCss).toMatch(/\.mozhi-auth-page-container\s*\{[^}]*margin:\s*0 auto;/s);
   });
