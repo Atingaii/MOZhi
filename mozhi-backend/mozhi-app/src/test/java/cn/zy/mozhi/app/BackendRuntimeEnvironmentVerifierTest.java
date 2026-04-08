@@ -22,6 +22,7 @@ class BackendRuntimeEnvironmentVerifierTest {
         String startScript = Files.readString(repoRoot.resolve("docs").resolve("dev-ops").resolve("app").resolve("start.ps1"));
         String dockerComposeEnvironment = Files.readString(repoRoot.resolve("docs").resolve("dev-ops").resolve("docker-compose-environment.yml"));
         String dockerComposeLocal = Files.readString(repoRoot.resolve("docs").resolve("dev-ops").resolve("docker-compose-local.yml"));
+        String redisConfig = Files.readString(repoRoot.resolve("docs").resolve("dev-ops").resolve("redis").resolve("redis.conf"));
         String backendDockerfileDev = Files.readString(repoRoot.resolve("mozhi-backend").resolve("Dockerfile.dev"));
         String frontendDockerfileDev = Files.readString(repoRoot.resolve("mozhi-web").resolve("Dockerfile.dev"));
         String rootReadme = Files.readString(repoRoot.resolve("README.md"));
@@ -45,6 +46,16 @@ class BackendRuntimeEnvironmentVerifierTest {
                         "PowerShell startup script must persist the backend PID for clean shutdown"),
                 () -> assertTrue(dockerComposeEnvironment.contains("image: apache/kafka:"),
                         "Docker Compose must use a maintained Apache Kafka image"),
+                () -> assertTrue(dockerComposeEnvironment.contains("mysql-data:/var/lib/mysql")
+                                && dockerComposeEnvironment.contains("redis-data:/data")
+                                && dockerComposeEnvironment.contains("kafka-data:/var/lib/kafka/data")
+                                && dockerComposeEnvironment.contains("minio-data:/data"),
+                        "environment compose must persist MySQL, Redis, Kafka, and MinIO data directories with named volumes"),
+                () -> assertTrue(dockerComposeEnvironment.contains("mysql-data:")
+                                && dockerComposeEnvironment.contains("redis-data:")
+                                && dockerComposeEnvironment.contains("kafka-data:")
+                                && dockerComposeEnvironment.contains("minio-data:"),
+                        "environment compose must declare named volumes for all stateful middleware"),
                 () -> assertTrue(dockerComposeLocal.contains("../../mozhi-backend:/workspace/mozhi-backend"),
                         "local compose must bind mount backend source into the dev container"),
                 () -> assertTrue(dockerComposeLocal.contains("../../mozhi-web:/workspace/mozhi-web"),
@@ -59,6 +70,8 @@ class BackendRuntimeEnvironmentVerifierTest {
                         "backend dev Dockerfile must install a file watcher and rebuild plus restart the backend on source changes"),
                 () -> assertTrue(frontendDockerfileDev.contains("WORKDIR /workspace/mozhi-web"),
                         "frontend dev Dockerfile must target the mounted source workspace"),
+                () -> assertTrue(redisConfig.contains("appendonly yes") && redisConfig.contains("appendfsync everysec"),
+                        "Redis config must keep append-only persistence enabled for the mounted data directory"),
                 () -> assertTrue(devProfile.contains("${MYSQL_HOST:127.0.0.1}") && devProfile.contains("${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:19092}"),
                         "dev profile must support env-driven middleware endpoints"),
                 () -> assertTrue(devProfile.contains("allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:true}"),
@@ -70,7 +83,9 @@ class BackendRuntimeEnvironmentVerifierTest {
                 () -> assertTrue(prodProfile.contains("${MYSQL_HOST:") && prodProfile.contains("${REDIS_HOST:") && prodProfile.contains("${KAFKA_BOOTSTRAP_SERVERS:"),
                         "prod profile must support env-driven middleware endpoints"),
                 () -> assertTrue(rootReadme.contains("日常开发只需") && devOpsReadme.contains("源文件修改后"),
-                        "operator docs must explain the day-to-day hot reload workflow")
+                        "operator docs must explain the day-to-day hot reload workflow"),
+                () -> assertTrue(rootReadme.contains("down -v") && devOpsReadme.contains("down -v"),
+                        "operator docs must explain that removing volumes clears persisted local middleware state")
         );
     }
 }

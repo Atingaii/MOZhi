@@ -52,11 +52,26 @@ Local Docker URLs:
 - Backend: `http://127.0.0.1:8090/api/health`
 - Swagger: `http://127.0.0.1:8090/swagger-ui/index.html`
 
+The shared middleware stack now persists local state with Docker named volumes:
+
+- MySQL data at `/var/lib/mysql`
+- Redis AOF data at `/data`
+- Kafka local log data at `/var/lib/kafka/data`
+- MinIO object data at `/data`
+
 Stop command:
 
 ```powershell
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
 ```
+
+To remove the local data volumes as well and reset middleware state:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down -v
+```
+
+`down` preserves persisted data. `down -v` removes it.
 
 源文件修改后：
 

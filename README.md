@@ -115,6 +115,13 @@ docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-op
 - Backend API: `http://127.0.0.1:8090/api/health`
 - Swagger UI: `http://127.0.0.1:8090/swagger-ui/index.html`
 
+本地中间件现在默认使用 Docker named volumes 持久化：
+
+- MySQL 用户和业务数据会保留
+- Redis AOF 数据会保留
+- Kafka 本地 topic / segment / offsets 会保留
+- MinIO bucket 与对象资源会保留
+
 源文件修改后：
 
 - 前端会通过 Vite 直接热更新
@@ -127,6 +134,14 @@ docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-op
 ```powershell
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
 ```
+
+如果你要连本地数据卷一起删除并回到全新状态，使用：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down -v
+```
+
+`down` 只停容器，`down -v` 才会清掉本地持久化数据。
 
 本地 Docker 版刻意不引入 Nginx，目的是保持最快启动路径和最低排障成本；如果后续需要单入口、HTTPS 和静态资源反向代理，再补独立的生产版部署配置。
 
