@@ -22,26 +22,33 @@ public class TurnstileAuthChallengeVerifierPortImpl implements IAuthChallengeVer
 
     private final TurnstileSiteVerifyGateway turnstileSiteVerifyGateway;
     private final List<String> allowedHostnames;
+    private final boolean allowBypassWhenUnconfigured;
 
     public TurnstileAuthChallengeVerifierPortImpl(
             TurnstileSiteVerifyGateway turnstileSiteVerifyGateway,
-            @Value("${mozhi.auth.challenge.turnstile.allowed-hostnames:}") String allowedHostnames
+            @Value("${mozhi.auth.challenge.turnstile.allowed-hostnames:}") String allowedHostnames,
+            @Value("${mozhi.auth.challenge.allow-bypass-when-unconfigured:false}") boolean allowBypassWhenUnconfigured
     ) {
         this.turnstileSiteVerifyGateway = turnstileSiteVerifyGateway;
         this.allowedHostnames = Arrays.stream(allowedHostnames.split(","))
                 .map(String::trim)
                 .filter(value -> !value.isEmpty())
                 .toList();
+        this.allowBypassWhenUnconfigured = allowBypassWhenUnconfigured;
     }
 
     @Override
     public boolean verify(String challengeToken, AuthRequestContext requestContext) {
+        if (!turnstileSiteVerifyGateway.isConfigured() || allowedHostnames.isEmpty()) {
+            return allowBypassWhenUnconfigured;
+        }
+
         if (challengeToken == null || challengeToken.isBlank()) {
             return false;
         }
 
         TurnstileSiteVerifyResponse response = turnstileSiteVerifyGateway.verify(challengeToken, requestContext.ip());
-        if (!response.success() || response.hostname() == null || allowedHostnames.isEmpty()) {
+        if (!response.success() || response.hostname() == null) {
             return false;
         }
 

@@ -16,5 +16,6 @@ mozhi:
     cookie-secure: ${MOZHI_AUTH_COOKIE_SECURE:false}
     challenge:
       provider: ${MOZHI_AUTH_CHALLENGE_PROVIDER:turnstile}
+      allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:true}
       turnstile:
         allowed-hostnames: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:localhost,127.0.0.1}

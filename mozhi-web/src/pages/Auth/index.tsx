@@ -236,7 +236,9 @@ export default function AuthPage() {
     : mode === "register"
       ? "注册 MOZhi 账号"
       : "登录 MOZhi";
-  const submitDisabled = authMutation.isPending || (requiresChallenge && challengeToken.trim().length === 0);
+  const submitDisabled =
+    authMutation.isPending ||
+    (requiresChallenge && turnstileSiteKey.trim().length > 0 && challengeToken.trim().length === 0);
 
   const passwordStrength = useMemo(() => resolvePasswordStrength(password), [password]);
   const passwordStrengthTone = resolveStrengthTone(passwordStrength);
@@ -244,7 +246,10 @@ export default function AuthPage() {
   const subtitleAction = mode === "register" ? "立即登录" : "立即注册";
   const title = mode === "register" ? "开启你的创作之旅" : "欢迎回到 MOZhi";
   const passwordPlaceholder = mode === "register" ? "至少 8 位" : "请输入密码";
-  const helperMessage = resolveAuthHelperMessage(apiError, infoMessage);
+  const helperMessage =
+    requiresChallenge && turnstileSiteKey.trim().length === 0
+      ? "当前环境未配置 Turnstile 站点密钥，请补充 VITE_TURNSTILE_SITE_KEY，或在本地开发环境启用后端 challenge 降级后重试。"
+      : resolveAuthHelperMessage(apiError, infoMessage);
 
   function switchMode(nextMode: AuthMode) {
     const nextSearch = new URLSearchParams(searchParams);

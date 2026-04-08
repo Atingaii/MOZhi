@@ -66,4 +66,8 @@ public class TurnstileSiteVerifyGateway {
             return TurnstileSiteVerifyResponse.failed();
         }
     }
+
+    public boolean isConfigured() {
+        return secretKey != null && !secretKey.isBlank();
+    }
 }

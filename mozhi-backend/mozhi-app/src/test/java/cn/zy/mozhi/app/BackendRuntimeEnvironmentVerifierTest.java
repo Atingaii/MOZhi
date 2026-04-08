@@ -42,8 +42,12 @@ class BackendRuntimeEnvironmentVerifierTest {
                         "Docker Compose must use a maintained Apache Kafka image"),
                 () -> assertTrue(devProfile.contains("${MYSQL_HOST:127.0.0.1}") && devProfile.contains("${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:19092}"),
                         "dev profile must support env-driven middleware endpoints"),
+                () -> assertTrue(devProfile.contains("allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:true}"),
+                        "dev profile must allow local challenge bypass when Turnstile is unconfigured"),
                 () -> assertTrue(testProfile.contains("${MYSQL_TEST_DATABASE:mozhi_test}"),
                         "test profile must support a separate test database"),
+                () -> assertTrue(prodProfile.contains("allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:false}"),
+                        "prod profile must keep unconfigured challenge bypass disabled by default"),
                 () -> assertTrue(prodProfile.contains("${MYSQL_HOST:") && prodProfile.contains("${REDIS_HOST:") && prodProfile.contains("${KAFKA_BOOTSTRAP_SERVERS:"),
                         "prod profile must support env-driven middleware endpoints")
         );

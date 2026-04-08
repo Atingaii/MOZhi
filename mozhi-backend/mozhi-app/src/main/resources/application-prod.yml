@@ -15,3 +15,7 @@ logging:
   file:
     name: /data/log/mozhi-app.log
 
+mozhi:
+  auth:
+    challenge:
+      allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:false}

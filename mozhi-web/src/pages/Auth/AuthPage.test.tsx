@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
 
 import { ApiClientError } from "@/api/client";
 import { loginWithPassword, registerAccount } from "@/api/modules/auth";
@@ -15,6 +15,10 @@ vi.mock("@/api/modules/auth", () => ({
 }));
 
 describe("AuthPage shell", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.mocked(registerAccount).mockReset();
     vi.mocked(loginWithPassword).mockReset();
@@ -169,5 +173,30 @@ describe("AuthPage shell", () => {
     expect(await screen.findByTestId("auth-challenge-widget")).toBeInTheDocument();
     expect(screen.queryByLabelText("验证口令")).not.toBeInTheDocument();
     expect(screen.queryByText(/dev-pass/i)).not.toBeInTheDocument();
+  });
+
+  it("does not hard-lock the submit button when challenge is required but the site key is missing", async () => {
+    vi.stubEnv("VITE_TURNSTILE_SITE_KEY", "");
+
+    const user = userEvent.setup();
+
+    vi.mocked(loginWithPassword).mockRejectedValueOnce(
+      new ApiClientError("A0410", "challenge required")
+    );
+
+    renderWithRouter("/auth?mode=login", [
+      {
+        path: "/auth",
+        element: <AuthLayout />,
+        children: [{ index: true, element: <AuthPage /> }]
+      }
+    ]);
+
+    await user.type(screen.getByLabelText("用户名或邮箱"), "alice");
+    await user.type(screen.getByLabelText("密码"), "Secret123!");
+    await user.click(screen.getByRole("button", { name: "登录 MOZhi" }));
+
+    expect(await screen.findByText(/当前环境未配置 Turnstile 站点密钥/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录 MOZhi" })).toBeEnabled();
   });
 });

@@ -17,4 +17,10 @@ describe("globals clarity tuning", () => {
     expect(globalsCss).toContain("--surface-raised: #ffffff;");
     expect(globalsCss).toContain("--surface-muted: #fcfcfd;");
   });
+
+  it("keeps the auth route shell vertically centered on desktop", () => {
+    expect(globalsCss).toMatch(/\.mozhi-auth-route-main\s*\{[^}]*display:\s*flex;/s);
+    expect(globalsCss).toMatch(/\.mozhi-auth-route-main\s*\{[^}]*align-items:\s*center;/s);
+    expect(globalsCss).toMatch(/\.mozhi-auth-page-container\s*\{[^}]*margin:\s*0 auto;/s);
+  });
 });

@@ -127,7 +127,9 @@ export default function AuthChallengeWidget({
       <span className="mozhi-auth-field-label">人机验证</span>
       <div className="mozhi-auth-challenge-widget" data-testid="auth-challenge-widget" ref={containerRef} />
       {!siteKey ? (
-        <p className="mozhi-auth-challenge-note">Turnstile 站点密钥未配置，当前环境无法完成人机验证。</p>
+        <p className="mozhi-auth-challenge-note">
+          当前页面未检测到可用的 Turnstile site key。本地开发请补充前端配置，或启用后端 challenge 降级后继续验证链路。
+        </p>
       ) : null}
     </div>
   );

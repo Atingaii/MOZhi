@@ -3721,15 +3721,30 @@ img {
 .mozhi-auth-route-main {
   min-height: calc(100vh - var(--navbar-height));
   height: calc(100vh - var(--navbar-height));
+  display: flex;
+  align-items: center;
+  padding: 24px 0 40px;
+}
+
+.mozhi-auth-route-main > .mozhi-route-transition {
+  display: flex;
+  width: 100%;
+  justify-content: center;
 }
 
 .mozhi-auth-page {
-  height: 100%;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  min-height: 100%;
 }
 
 .mozhi-auth-page-container {
   display: flex;
+  width: min(100%, 1180px);
   height: 100%;
+  min-height: min(760px, calc(100vh - var(--navbar-height) - 64px));
+  margin: 0 auto;
 }
 
 .mozhi-auth-form-column {
@@ -4250,15 +4265,19 @@ img {
   .mozhi-auth-route-main {
     height: auto;
     min-height: calc(100vh - var(--navbar-height));
+    display: block;
+    padding: 0;
   }
 
   .mozhi-auth-page {
     height: auto;
     min-height: calc(100vh - var(--navbar-height));
+    display: block;
   }
 
   .mozhi-auth-page-container {
     display: block;
+    width: 100%;
     height: auto;
     min-height: calc(100vh - var(--navbar-height));
   }

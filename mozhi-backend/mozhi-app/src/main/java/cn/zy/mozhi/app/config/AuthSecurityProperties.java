@@ -32,6 +32,7 @@ public class AuthSecurityProperties {
     public static class Challenge {
 
         private String provider = "turnstile";
+        private boolean allowBypassWhenUnconfigured;
         private final Turnstile turnstile = new Turnstile();
 
         public String getProvider() {
@@ -40,6 +41,14 @@ public class AuthSecurityProperties {
 
         public void setProvider(String provider) {
             this.provider = provider;
+        }
+
+        public boolean isAllowBypassWhenUnconfigured() {
+            return allowBypassWhenUnconfigured;
+        }
+
+        public void setAllowBypassWhenUnconfigured(boolean allowBypassWhenUnconfigured) {
+            this.allowBypassWhenUnconfigured = allowBypassWhenUnconfigured;
         }
 
         public Turnstile getTurnstile() {
