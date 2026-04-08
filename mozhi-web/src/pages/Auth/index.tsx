@@ -10,6 +10,7 @@ import {
   registerAccount,
   type RegisterPayload
 } from "@/api/modules/auth";
+import AuthChallengeWidget from "@/components/auth/AuthChallengeWidget";
 import {
   EyeIcon,
   FacebookIcon,
@@ -132,9 +133,7 @@ function resolveAuthHelperMessage(apiError: ApiClientError | null, infoMessage: 
   }
 
   if (apiError.code === "A0410") {
-    return import.meta.env.DEV
-      ? "当前请求需要附加验证，本地开发环境可输入 dev-pass。"
-      : "当前请求需要附加验证，请完成人机验证后重试。";
+    return "当前请求需要附加验证，请完成人机验证后重试。";
   }
 
   if (apiError.code === "A0429") {
@@ -159,6 +158,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [challengeToken, setChallengeToken] = useState("");
+  const [challengeResetSignal, setChallengeResetSignal] = useState(0);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
@@ -198,6 +198,10 @@ export default function AuthPage() {
         session
       };
     },
+    onError: () => {
+      setChallengeToken("");
+      setChallengeResetSignal((current) => current + 1);
+    },
     onSuccess: (result) => {
       if (result.type === "registered") {
         const nextSearch = new URLSearchParams(searchParams);
@@ -209,6 +213,7 @@ export default function AuthPage() {
         setEmail("");
         setNickname("");
         setChallengeToken("");
+        setChallengeResetSignal((current) => current + 1);
         setPasswordVisible(false);
         setInfoMessage("注册成功，请使用刚创建的账号登录。");
         return;
@@ -223,6 +228,7 @@ export default function AuthPage() {
   const apiError = authMutation.error ? toApiClientError(authMutation.error) : null;
   const requiresChallenge = apiError?.code === "A0410";
   const isRateLimited = apiError?.code === "A0429";
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
   const submitLabel = authMutation.isPending
     ? mode === "register"
       ? "正在创建..."
@@ -230,6 +236,7 @@ export default function AuthPage() {
     : mode === "register"
       ? "注册 MOZhi 账号"
       : "登录 MOZhi";
+  const submitDisabled = authMutation.isPending || (requiresChallenge && challengeToken.trim().length === 0);
 
   const passwordStrength = useMemo(() => resolvePasswordStrength(password), [password]);
   const passwordStrengthTone = resolveStrengthTone(passwordStrength);
@@ -249,6 +256,7 @@ export default function AuthPage() {
     setEmail("");
     setNickname("");
     setChallengeToken("");
+    setChallengeResetSignal((current) => current + 1);
     setPasswordVisible(false);
     setInfoMessage(null);
     authMutation.reset();
@@ -401,16 +409,11 @@ export default function AuthPage() {
               </label>
 
               {requiresChallenge ? (
-                <label className="mozhi-auth-field">
-                  <span className="mozhi-auth-field-label">验证口令</span>
-                  <input
-                    className="mozhi-auth-input"
-                    onChange={(event) => setChallengeToken(event.target.value)}
-                    placeholder="输入验证令牌"
-                    required
-                    value={challengeToken}
-                  />
-                </label>
+                <AuthChallengeWidget
+                  onTokenChange={setChallengeToken}
+                  resetSignal={challengeResetSignal}
+                  siteKey={turnstileSiteKey}
+                />
               ) : null}
 
               {helperMessage ? (
@@ -438,7 +441,7 @@ export default function AuthPage() {
                 </label>
               ) : null}
 
-              <button className="mozhi-auth-submit-button" disabled={authMutation.isPending} type="submit">
+              <button className="mozhi-auth-submit-button" disabled={submitDisabled} type="submit">
                 {submitLabel}
               </button>
             </form>

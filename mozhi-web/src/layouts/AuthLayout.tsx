@@ -1,6 +1,7 @@
 import { Outlet, useSearchParams } from "react-router-dom";
 
 import AppHeader from "@/components/layout/AppHeader";
+import RouteTransitionFrame from "@/components/layout/RouteTransitionFrame";
 
 type AuthMode = "login" | "register";
 
@@ -18,7 +19,9 @@ export default function AuthLayout() {
       <AppHeader authMode={mode} authRedirect={redirect} surface="auth" />
 
       <main className="mozhi-auth-route-main">
-        <Outlet />
+        <RouteTransitionFrame>
+          <Outlet />
+        </RouteTransitionFrame>
       </main>
     </div>
   );

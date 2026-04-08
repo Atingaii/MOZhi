@@ -98,16 +98,20 @@ npm run dev
 - `accessToken` 只保存在前端内存，不写入 `localStorage`
 - `refreshToken` 通过 `mozhi_refresh_token` `HttpOnly` Cookie 下发
 - 前端刷新页面时会自动走 `/api/auth/refresh` 恢复会话
-- 本地开发默认 `MOZHI_AUTH_COOKIE_SECURE=false`，部署到 HTTPS 环境时应改为 `true`
+- 生产默认 `MOZHI_AUTH_COOKIE_SECURE=true`，本地开发通过 `application-dev.yml` 显式覆盖为 `false`
 
 ## 认证安全开关
 
 - `MOZHI_AUTH_COOKIE_SECURE`
   控制 refresh cookie 是否带 `Secure`
 - `MOZHI_AUTH_CHALLENGE_PROVIDER`
-  当前默认 `noop`，用于本地联调 challenge 升级链路
-- `MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN`
-  `noop` provider 的通过口令，默认 `dev-pass`
+  默认 `turnstile`；测试环境通过 `test` provider 提供确定性 challenge 校验
+- `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
+  后端调用 Turnstile `siteverify` 的服务端密钥，只能放在环境变量里
+- `MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES`
+  Turnstile 校验成功后允许通过的主机名列表，例如 `localhost,127.0.0.1`
+- `VITE_TURNSTILE_SITE_KEY`
+  前端渲染 challenge widget 使用的站点密钥
 
 ## 文档导航
 

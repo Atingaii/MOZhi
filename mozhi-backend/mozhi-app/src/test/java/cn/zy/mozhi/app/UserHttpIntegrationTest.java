@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "spring.datasource.url=jdbc:h2:mem:mozhi-user-http;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
                 "spring.datasource.username=sa",
                 "spring.datasource.password=",
+                "mozhi.auth.challenge.provider=test",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"

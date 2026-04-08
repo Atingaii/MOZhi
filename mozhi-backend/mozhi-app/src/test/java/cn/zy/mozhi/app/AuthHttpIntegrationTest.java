@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "spring.datasource.url=jdbc:h2:mem:mozhi-auth-http;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE",
                 "spring.datasource.username=sa",
                 "spring.datasource.password=",
+                "mozhi.auth.challenge.provider=test",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration,"
                         + "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration"
@@ -307,13 +308,13 @@ class AuthHttpIntegrationTest {
         for (int index = 0; index < 10; index++) {
             mockMvc.perform(post("/api/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(loginRequest("alice", "WrongPass8", "dev-pass")))
+                            .content(loginRequest("alice", "WrongPass8", "test-pass-token")))
                     .andExpect(status().isUnauthorized());
         }
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginRequest("alice", "Secret123!", "dev-pass")))
+                        .content(loginRequest("alice", "Secret123!", "test-pass-token")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("A0429"));

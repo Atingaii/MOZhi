@@ -207,23 +207,20 @@ npx vite --host 127.0.0.1 --port 5173
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `MOZHI_AUTH_COOKIE_SECURE` | refresh cookie 是否带 `Secure` | `false` |
-| `MOZHI_AUTH_CHALLENGE_PROVIDER` | challenge provider，当前支持本地 `noop` | `noop` |
-| `MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN` | `noop` provider 的通过口令 | `dev-pass` |
+| `MOZHI_AUTH_COOKIE_SECURE` | refresh cookie 是否带 `Secure` | `true` |
+| `MOZHI_AUTH_CHALLENGE_PROVIDER` | challenge provider，默认 `turnstile` | `turnstile` |
+| `MOZHI_AUTH_TURNSTILE_SECRET_KEY` | Turnstile secret key，仅后端使用 | - |
+| `MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES` | Turnstile 允许的 hostname 列表 | 空 |
+| `VITE_TURNSTILE_SITE_KEY` | Turnstile site key，前端公开变量 | - |
 
 本地开发通常保持：
 
 ```powershell
 $env:MOZHI_AUTH_COOKIE_SECURE = "false"
+$env:MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES = "localhost,127.0.0.1"
 ```
 
-如果要验证 challenge 升级链路，在本地 `noop` provider 下可使用：
-
-```text
-dev-pass
-```
-
-生产环境不应继续使用 `noop` provider。
+本地开发可使用 Cloudflare Turnstile 测试 key，或者将真实 key 绑定到 `localhost/127.0.0.1` 后再运行。后端始终做 server-side 校验，并按 allow-list 校验返回的 `hostname`。
 
 ## 本地服务与端口
 

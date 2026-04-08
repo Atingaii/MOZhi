@@ -21,10 +21,15 @@ mybatis:
 
 mozhi:
   auth:
-    cookie-secure: ${MOZHI_AUTH_COOKIE_SECURE:false}
+    cookie-secure: ${MOZHI_AUTH_COOKIE_SECURE:true}
     challenge:
-      provider: ${MOZHI_AUTH_CHALLENGE_PROVIDER:noop}
-      noop-pass-token: ${MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN:dev-pass}
+      provider: ${MOZHI_AUTH_CHALLENGE_PROVIDER:turnstile}
+      turnstile:
+        secret-key: ${MOZHI_AUTH_TURNSTILE_SECRET_KEY:}
+        site-verify-url: ${MOZHI_AUTH_TURNSTILE_SITE_VERIFY_URL:https://challenges.cloudflare.com/turnstile/v0/siteverify}
+        allowed-hostnames: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:}
+        connect-timeout: ${MOZHI_AUTH_TURNSTILE_CONNECT_TIMEOUT:3s}
+        read-timeout: ${MOZHI_AUTH_TURNSTILE_READ_TIMEOUT:3s}
     limits:
       login-ip-max-attempts: ${MOZHI_AUTH_LOGIN_IP_MAX_ATTEMPTS:20}
       login-ip-window-minutes: ${MOZHI_AUTH_LOGIN_IP_WINDOW_MINUTES:10}

@@ -1,49 +1,138 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import clsx from "clsx";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { toApiClientError } from "@/api/client";
-import { logoutCurrentSession } from "@/api/modules/auth";
+import { logoutAllSessions, logoutCurrentSession } from "@/api/modules/auth";
 import {
   confirmAvatarUpload,
   presignAvatarUpload,
   updateUserProfile,
   uploadAvatarToPresignedUrl
 } from "@/api/modules/user";
-import {
-  CardField,
-  FeaturedCard,
-  InfoCard,
-  InfoGrid,
-  Metric,
-  PageHero,
-  PageSection,
-  SectionHeading,
-  StatusMetrics
-} from "@/components/ui/Editorial";
 import { useUserProfileQuery } from "@/hooks/useUserProfileQuery";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-const profileCards = [
+const profileStats = [
+  { label: "内容", value: "128" },
+  { label: "关注者", value: "2.4k" },
+  { label: "获赞", value: "15.8k" }
+] as const;
+
+const portraitTags = [
+  "# 数码极客",
+  "# 终身学习者",
+  "# 极简主义",
+  "# 咖啡深度爱好者"
+] as const;
+
+const workspaceSections = [
   {
-    accent: "#2563eb",
-    eyebrow: "Identity",
-    title: "昵称和头像会成为导航、个人页和社群互动里的统一身份入口。",
-    description: "资料编辑页先做清楚核心身份字段，再慢慢接入更多周边能力。"
+    title: "内容与创作中心",
+    cards: [
+      {
+        title: "我的发布",
+        description: "管理你的文章、视频和深度回答，查看实时交互数据。",
+        icon: "publish",
+        tone: "purple"
+      },
+      {
+        title: "AI 知识库",
+        description: "基于你历史内容的 AI 训练模型，帮助你自动生成初稿。",
+        icon: "knowledge",
+        tone: "blue"
+      },
+      {
+        title: "橱窗管理",
+        description: "上架你精选的知识周边或数字产品，开启收益变现。",
+        icon: "showcase",
+        tone: "orange"
+      }
+    ]
   },
   {
-    accent: "#0f766e",
-    eyebrow: "Session",
-    title: "当前页面直接依赖真实会话，不再是静态说明页。",
-    description: "刷新页面后 token 会从持久化 store 恢复，接口再按需要自动刷新。"
-  },
-  {
-    accent: "#c2410c",
-    eyebrow: "Storage",
-    title: "头像上传先走预签名 URL，再回写 avatar_url。",
-    description: "上传本身不经过应用服务，但最终资料变更仍然回到同一条用户域更新链路。"
+    title: "社交电商与生活",
+    cards: [
+      {
+        title: "我的拼团",
+        description: "正在进行的 3 个拼团任务，邀请好友共同解锁超低价。",
+        icon: "group",
+        tone: "pink"
+      },
+      {
+        title: "墨知钱包",
+        description: "可用余额：¥ 1,240.50。支持稿费同步与购物直接抵扣。",
+        icon: "wallet",
+        tone: "green"
+      },
+      {
+        title: "偏好设置",
+        description: "同步内容偏好、通知节奏和个人展示风格。",
+        icon: "settings",
+        tone: "slate"
+      }
+    ]
   }
 ] as const;
+
+type WorkspaceIcon = (typeof workspaceSections)[number]["cards"][number]["icon"];
+
+function WorkspaceCardIcon({ icon }: { icon: WorkspaceIcon }) {
+  switch (icon) {
+    case "publish":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6.5 17.5L17.5 6.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <path d="M8 6H18V16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          <path d="M5 11.5V18.5H12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        </svg>
+      );
+    case "knowledge":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 4L19 7.5L12 11L5 7.5L12 4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+          <path d="M5 12L12 15.5L19 12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+          <path d="M5 16.5L12 20L19 16.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        </svg>
+      );
+    case "showcase":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 10H20V19H4V10Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+          <path d="M6 10V7.5C6 6.12 7.12 5 8.5 5H15.5C16.88 5 18 6.12 18 7.5V10" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <path d="M9 14H15" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        </svg>
+      );
+    case "group":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="9" r="3" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="16.5" cy="10.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M4.5 18C5.31 15.79 7.42 14.25 9.9 14.25C12.38 14.25 14.49 15.79 15.3 18" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <path d="M15.25 17.25C15.75 16.02 16.95 15.12 18.35 15.12C19.2 15.12 19.98 15.45 20.56 16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        </svg>
+      );
+    case "wallet":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 8.5C4 7.12 5.12 6 6.5 6H17.5C18.88 6 20 7.12 20 8.5V17C20 18.1 19.1 19 18 19H6C4.9 19 4 18.1 4 17V8.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+          <path d="M15 13.5H20" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <circle cx="15.5" cy="13.5" r="0.9" fill="currentColor" />
+          <path d="M6 8.5H16.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        </svg>
+      );
+    case "settings":
+      return (
+        <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 7H18" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <path d="M6 17H18" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          <circle cx="9" cy="7" r="2" fill="#fff" stroke="currentColor" strokeWidth="1.8" />
+          <circle cx="15" cy="17" r="2" fill="#fff" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      );
+  }
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -52,20 +141,40 @@ export default function ProfilePage() {
   const userId = user?.userId ?? null;
 
   const profileQuery = useUserProfileQuery(userId);
+  const hasProfileData = profileQuery.data != null;
+  const profileNickname = profileQuery.data?.nickname ?? "";
+  const profileBio = profileQuery.data?.bio ?? "";
+  const profileAvatarUrl = profileQuery.data?.avatarUrl ?? null;
   const [nickname, setNickname] = useState("");
   const [bio, setBio] = useState("");
+  const [activeView, setActiveView] = useState<"dashboard" | "edit">("dashboard");
   const [avatarNotice, setAvatarNotice] = useState<string | null>(null);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (profileQuery.data) {
-      setNickname(profileQuery.data.nickname);
-      setBio(profileQuery.data.bio ?? "");
+    if (!hasProfileData) {
+      return;
+    }
+
+    setNickname((current) => (current === profileNickname ? current : profileNickname));
+    setBio((current) => (current === profileBio ? current : profileBio));
+
+    if (user?.nickname !== profileNickname || user?.avatarUrl !== profileAvatarUrl) {
       syncProfile({
-        nickname: profileQuery.data.nickname,
-        avatarUrl: profileQuery.data.avatarUrl
+        nickname: profileNickname,
+        avatarUrl: profileAvatarUrl
       });
     }
-  }, [profileQuery.data, syncProfile]);
+  }, [
+    hasProfileData,
+    profileAvatarUrl,
+    profileBio,
+    profileNickname,
+    syncProfile,
+    user?.avatarUrl,
+    user?.nickname
+  ]);
 
   const profileMutation = useMutation({
     mutationFn: () =>
@@ -79,6 +188,7 @@ export default function ProfilePage() {
         avatarUrl: profile.avatarUrl
       });
       queryClient.setQueryData(["user-profile", userId], profile);
+      setActiveView("dashboard");
     }
   });
 
@@ -113,6 +223,15 @@ export default function ProfilePage() {
     }
   });
 
+  const logoutAllMutation = useMutation({
+    mutationFn: () => logoutAllSessions(),
+    onSettled: () => {
+      setSessionNotice("当前账号已退出所有设备。");
+      reset();
+      navigate("/auth?mode=login", { replace: true });
+    }
+  });
+
   const profileError = profileMutation.error ? toApiClientError(profileMutation.error).message : null;
   const avatarError = avatarMutation.error ? toApiClientError(avatarMutation.error).message : null;
 
@@ -137,113 +256,192 @@ export default function ProfilePage() {
   }
 
   const usernameLabel = profileQuery.data?.username ?? user?.username ?? `user-${userId}`;
-  const avatarInitial = (profileQuery.data?.nickname ?? user?.username ?? "U")
-    .slice(0, 1)
-    .toUpperCase();
+  const profileName = profileNickname || user?.nickname || "MOZhi Creator";
+  const profileHandle = `@${usernameLabel}`;
+  const avatarInitial = profileName.slice(0, 1).toUpperCase();
 
   return (
-    <>
-      <PageHero
-        description="这里已经接到真实用户接口，可以修改昵称、简介，走头像预签名上传，并在退出时回收当前会话。"
-        links={[
-          { href: "/settings", label: "查看设置页" },
-          { href: "/notifications", label: "查看通知" }
-        ]}
-        title="个人资料现在不再是占位说明，而是接入真实用户域的编辑面。"
-      >
-        <StatusMetrics>
-          <Metric label="用户" value={usernameLabel} />
-          <Metric label="状态" value={profileQuery.data?.status ?? "ACTIVE"} />
-          <Metric label="资料加载" value={profileQuery.isLoading ? "loading" : "ready"} />
-          <Metric label="会话" value="protected route" />
-        </StatusMetrics>
-      </PageHero>
+    <div className="mozhi-profile-page">
+      <div className="mozhi-profile-layout">
+        <aside className="mozhi-profile-sidebar">
+          <section className="mozhi-profile-card">
+            <div className="mozhi-profile-avatar-large" aria-hidden="true">
+              {profileAvatarUrl ? <img alt="" src={profileAvatarUrl} /> : <span>{avatarInitial}</span>}
+            </div>
+            <h1 className="mozhi-profile-name">{profileName}</h1>
+            <span className="mozhi-profile-handle">{profileHandle}</span>
 
-      <PageSection>
-        <div className="mozhi-auth-layout">
-          <FeaturedCard
-            className="mozhi-auth-panel"
-            description="资料更新和头像上传都会回写到同一份用户档案里，导航和后续页面也会立刻拿到同步后的身份信息。"
-            meta="User domain"
-            title="编辑个人资料"
-          >
-            <form className="mozhi-auth-form" onSubmit={handleProfileSubmit}>
-              <label className="mozhi-field-label">
-                <span>昵称</span>
-                <CardField
-                  onChange={(event) => setNickname(event.target.value)}
-                  placeholder="Alice"
-                  value={nickname}
-                />
-              </label>
-              <label className="mozhi-field-label">
-                <span>简介</span>
-                <textarea
-                  className="mozhi-textarea"
-                  onChange={(event) => setBio(event.target.value)}
-                  placeholder="写一句能让别人快速理解你的介绍。"
-                  rows={5}
-                  value={bio}
-                />
-              </label>
+            <div className="mozhi-profile-card-actions">
+              <button className="mozhi-profile-edit-trigger" onClick={() => setActiveView("edit")} type="button">
+                编辑资料
+              </button>
+              <button
+                className="mozhi-profile-secondary-action"
+                disabled={logoutAllMutation.isPending}
+                onClick={() => logoutAllMutation.mutate()}
+                type="button"
+              >
+                {logoutAllMutation.isPending ? "处理中..." : "退出所有设备"}
+              </button>
+            </div>
 
-              <div className="mozhi-avatar-uploader">
-                <div className="mozhi-avatar-preview" aria-hidden="true">
-                  {profileQuery.data?.avatarUrl ? (
-                    <img alt="" src={profileQuery.data.avatarUrl} />
-                  ) : (
-                    <span>{avatarInitial}</span>
-                  )}
+            <div className="mozhi-profile-badge">
+              <span className="mozhi-profile-badge-dot" aria-hidden="true" />
+              认证创作者
+            </div>
+
+            {sessionNotice ? <p className="mozhi-inline-success">{sessionNotice}</p> : null}
+
+            <div className="mozhi-profile-stats-row">
+              {profileStats.map((stat) => (
+                <div key={stat.label} className="mozhi-profile-stat-item">
+                  <span className="mozhi-profile-stat-value">{stat.value}</span>
+                  <span className="mozhi-profile-stat-label">{stat.label}</span>
                 </div>
-                <div className="mozhi-avatar-copy">
-                  <strong>头像上传</strong>
-                  <p>请求预签名 URL → 直传对象存储 → 回写 avatar_url。</p>
-                  <label className="mozhi-button mozhi-button-secondary">
-                    <input accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={handleAvatarChange} type="file" />
-                    {avatarMutation.isPending ? "上传中..." : "上传头像"}
-                  </label>
-                </div>
-              </div>
-
-              {profileError ? <p className="mozhi-inline-error">{profileError}</p> : null}
-              {avatarError ? <p className="mozhi-inline-error">{avatarError}</p> : null}
-              {avatarNotice ? <p className="mozhi-inline-success">{avatarNotice}</p> : null}
-
-              <div className="mozhi-form-actions">
-                <button className="mozhi-button" disabled={profileMutation.isPending} type="submit">
-                  {profileMutation.isPending ? "保存中..." : "保存资料"}
-                </button>
-                <button
-                  className="mozhi-auth-link"
-                  disabled={logoutMutation.isPending}
-                  onClick={() => logoutMutation.mutate()}
-                  type="button"
-                >
-                  {logoutMutation.isPending ? "退出中..." : "退出登录"}
-                </button>
-              </div>
-            </form>
-          </FeaturedCard>
-
-          <div className="mozhi-auth-sidebar">
-            <SectionHeading
-              subtitle="资料页现在已经和真实会话、真实用户数据连在一起。"
-              title="Profile surfaces"
-            />
-            <InfoGrid>
-              {profileCards.map((item) => (
-                <InfoCard
-                  key={item.title}
-                  accent={item.accent}
-                  description={item.description}
-                  eyebrow={item.eyebrow}
-                  title={item.title}
-                />
               ))}
-            </InfoGrid>
-          </div>
-        </div>
-      </PageSection>
-    </>
+            </div>
+          </section>
+
+          <section className="mozhi-profile-tag-panel">
+            <p className="mozhi-profile-section-title">人群画像标签</p>
+            <div className="mozhi-profile-tag-cloud">
+              {portraitTags.map((tag) => (
+                <span key={tag} className="mozhi-profile-tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <section className="mozhi-profile-workspace">
+          {activeView === "dashboard" ? (
+            <div className={clsx("mozhi-profile-view-pane", "is-active")}>
+              {workspaceSections.map((section) => (
+                <section key={section.title} className="mozhi-profile-workspace-section">
+                  <div className="mozhi-profile-workspace-header">
+                    <h2 className="mozhi-profile-workspace-heading">{section.title}</h2>
+                  </div>
+                  <div className="mozhi-profile-bento-grid">
+                    {section.cards.map((card) => (
+                      <article key={card.title} className="mozhi-profile-bento-item">
+                        <div
+                          aria-hidden="true"
+                          className={clsx("mozhi-profile-bento-icon", `is-${card.tone}`)}
+                        >
+                          <WorkspaceCardIcon icon={card.icon} />
+                        </div>
+                        <div className="mozhi-profile-bento-copy">
+                          <h3>{card.title}</h3>
+                          <p>{card.description}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className={clsx("mozhi-profile-view-pane", "is-active")}>
+              <section className="mozhi-profile-edit-panel">
+                <div className="mozhi-profile-edit-header">
+                  <div>
+                    <p className="mozhi-profile-section-title">资料编辑器</p>
+                    <h2>编辑个人资料</h2>
+                  </div>
+                  <button
+                    aria-label="关闭编辑视图"
+                    className="mozhi-profile-close-edit"
+                    onClick={() => setActiveView("dashboard")}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mozhi-profile-avatar-edit-box">
+                  <div className="mozhi-avatar-preview" aria-hidden="true">
+                    {profileAvatarUrl ? (
+                      <img alt="" src={profileAvatarUrl} />
+                    ) : (
+                      <span>{avatarInitial}</span>
+                    )}
+                  </div>
+                  <div className="mozhi-avatar-copy">
+                    <strong>头像上传</strong>
+                    <button
+                      className="mozhi-button mozhi-button-secondary"
+                      onClick={() => fileInputRef.current?.click()}
+                      type="button"
+                    >
+                      {avatarMutation.isPending ? "上传中..." : "上传头像"}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      hidden
+                      onChange={handleAvatarChange}
+                      type="file"
+                    />
+                  </div>
+                </div>
+
+                <form className="mozhi-profile-edit-form" onSubmit={handleProfileSubmit}>
+                  <label className="mozhi-field-label">
+                    <span>昵称</span>
+                    <input
+                      className="mozhi-profile-edit-input"
+                      onChange={(event) => setNickname(event.target.value)}
+                      placeholder="Alice"
+                      value={nickname}
+                    />
+                  </label>
+                  <label className="mozhi-field-label">
+                    <span>简介</span>
+                    <textarea
+                      className="mozhi-textarea"
+                      onChange={(event) => setBio(event.target.value)}
+                      placeholder="写一句能让别人快速理解你的介绍。"
+                      rows={5}
+                      value={bio}
+                    />
+                  </label>
+
+                  <div className="mozhi-profile-tag-editor">
+                    <span className="mozhi-field-label">画像标签</span>
+                    <div className="mozhi-profile-tag-cloud">
+                      {portraitTags.map((tag) => (
+                        <span key={tag} className="mozhi-profile-tag mozhi-profile-tag-edit">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mozhi-profile-tag-note">当前为前端展示位，后续接入真实画像接口。</p>
+                  </div>
+
+                  {profileError ? <p className="mozhi-inline-error">{profileError}</p> : null}
+                  {avatarError ? <p className="mozhi-inline-error">{avatarError}</p> : null}
+                  {avatarNotice ? <p className="mozhi-inline-success">{avatarNotice}</p> : null}
+
+                  <div className="mozhi-form-actions">
+                    <button className="mozhi-button" disabled={profileMutation.isPending} type="submit">
+                      {profileMutation.isPending ? "保存中..." : "保存资料"}
+                    </button>
+                    <button
+                      className="mozhi-auth-link"
+                      disabled={logoutMutation.isPending}
+                      onClick={() => logoutMutation.mutate()}
+                      type="button"
+                    >
+                      {logoutMutation.isPending ? "退出中..." : "退出登录"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
   );
 }

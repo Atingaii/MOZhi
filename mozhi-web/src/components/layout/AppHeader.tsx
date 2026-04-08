@@ -1,6 +1,8 @@
 import clsx from "clsx";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 
+import { logoutCurrentSession } from "@/api/modules/auth";
 import brandMark from "@/assets/mozhi-mark.svg";
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -20,11 +22,10 @@ interface AppHeaderProps {
 }
 
 const primaryLinks: PrimaryLink[] = [
-  { to: "/search", label: "搜索" },
-  { to: "/", label: "发现", end: true },
-  { to: "/qa", label: "问答" },
-  { to: "/editor", label: "创作" },
-  { to: "/commerce", label: "商城" }
+  { to: "/", label: "首页", end: true },
+  { to: "/qa", label: "墨问" },
+  { to: "/commerce", label: "知选" },
+  { to: "/editor", label: "实验室" }
 ];
 
 function buildAuthHref(nextMode: AuthMode, redirect: string | null | undefined) {
@@ -50,74 +51,141 @@ function BellIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M20 20L16.65 16.65" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 export default function AppHeader({
   surface = "app",
   authMode,
   authRedirect
 }: AppHeaderProps) {
-  const { status, user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { status, user, reset } = useAuthStore();
   const avatarLabel = (user?.nickname ?? user?.username ?? "U").slice(0, 1).toUpperCase();
   const showAuthenticatedActions = surface === "app" && status === "authenticated";
   const loginHref = buildAuthHref("login", authRedirect);
   const registerHref = buildAuthHref("register", authRedirect);
+  const routeSearchQuery = new URLSearchParams(location.search).get("q") ?? "";
+  const [searchQuery, setSearchQuery] = useState(routeSearchQuery);
+  const [logoutPending, setLogoutPending] = useState(false);
+
+  useEffect(() => {
+    setSearchQuery(location.pathname === "/search" ? routeSearchQuery : "");
+  }, [location.pathname, routeSearchQuery]);
+
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nextQuery = searchQuery.trim();
+    const nextSearch = nextQuery.length > 0 ? `?q=${encodeURIComponent(nextQuery)}` : "";
+
+    navigate({
+      pathname: "/search",
+      search: nextSearch
+    });
+  }
+
+  async function handleLogout() {
+    setLogoutPending(true);
+
+    try {
+      await logoutCurrentSession();
+    } catch (error) {
+      console.error("Failed to invalidate remote session before local logout.", error);
+    } finally {
+      reset();
+      setLogoutPending(false);
+      navigate("/auth?mode=login", { replace: true });
+    }
+  }
 
   return (
     <header className={clsx("mozhi-navbar", surface === "auth" && "mozhi-navbar-auth-surface")}>
       <div className="mozhi-container">
         <div className="mozhi-navbar-inner">
-          <Link aria-label="MOZhi" className="mozhi-brand" to="/">
-            <img alt="" aria-hidden="true" className="mozhi-brand-mark" src={brandMark} />
-            <span className="mozhi-brand-title">MOZhi</span>
-          </Link>
-          <div className="mozhi-nav-cluster">
-            <nav aria-label="Primary" className="mozhi-nav-links">
-              {primaryLinks.map((link) => (
-                <NavLink
-                  key={link.to}
-                  className={({ isActive }) =>
-                    clsx("mozhi-nav-link", isActive && "mozhi-nav-link-active")
-                  }
-                  end={link.end}
-                  to={link.to}
-                >
-                  {link.label}
+          <div className="mozhi-navbar-left">
+            <Link aria-label="MOZhi" className="mozhi-brand" to="/">
+              <img alt="" aria-hidden="true" className="mozhi-brand-mark" src={brandMark} />
+              <span className="mozhi-brand-title">MOZhi</span>
+            </Link>
+            <form className="mozhi-header-search-form" onSubmit={handleSearchSubmit}>
+              <label className="mozhi-header-search-shell" htmlFor="mozhi-global-search">
+                <span className="mozhi-header-search-icon">
+                  <SearchIcon />
+                </span>
+                <input
+                  id="mozhi-global-search"
+                  aria-label="全局搜索"
+                  className="mozhi-header-search-input"
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="搜索话题、商品或 AI..."
+                  type="search"
+                  value={searchQuery}
+                />
+              </label>
+            </form>
+          </div>
+          <nav aria-label="Primary" className="mozhi-nav-links">
+            {primaryLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                className={({ isActive }) =>
+                  clsx("mozhi-nav-link", isActive && "mozhi-nav-link-active")
+                }
+                end={link.end}
+                to={link.to}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="mozhi-nav-actions">
+            {showAuthenticatedActions ? (
+              <>
+                <NavLink aria-label="通知" className="mozhi-icon-btn" to="/notifications">
+                  <BellIcon />
                 </NavLink>
-              ))}
-            </nav>
-            <span aria-hidden="true" className="mozhi-nav-divider" />
-            <div className="mozhi-nav-actions">
-              {showAuthenticatedActions ? (
-                <>
-                  <NavLink aria-label="通知" className="mozhi-icon-btn" to="/notifications">
-                    <BellIcon />
-                  </NavLink>
-                  <Link aria-label="个人中心" className="mozhi-avatar" to="/profile">
-                    {avatarLabel}
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    aria-current={authMode === "login" ? "page" : undefined}
-                    className={clsx("mozhi-auth-link", authMode === "login" && "is-active")}
-                    to={loginHref}
-                  >
-                    登录
-                  </Link>
-                  <Link
-                    aria-current={authMode === "register" ? "page" : undefined}
-                    className={clsx(
-                      "mozhi-auth-button",
-                      "mozhi-btn-compact",
-                      authMode === "register" && "is-active"
-                    )}
-                    to={registerHref}
-                  >
-                    注册
-                  </Link>
-                </>
-              )}
-            </div>
+                <button
+                  className="mozhi-auth-link mozhi-header-logout"
+                  disabled={logoutPending}
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  {logoutPending ? "退出中..." : "退出登录"}
+                </button>
+                <Link aria-label="个人中心" className="mozhi-avatar" to="/profile">
+                  {avatarLabel}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  aria-current={authMode === "login" ? "page" : undefined}
+                  className={clsx("mozhi-auth-link", authMode === "login" && "is-active")}
+                  to={loginHref}
+                >
+                  登录
+                </Link>
+                <Link
+                  aria-current={authMode === "register" ? "page" : undefined}
+                  className={clsx(
+                    "mozhi-auth-button",
+                    "mozhi-btn-compact",
+                    authMode === "register" && "is-active"
+                  )}
+                  to={registerHref}
+                >
+                  注册
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -46,11 +46,12 @@ describe("AuthPage shell", () => {
     ]);
 
     expect(screen.getByRole("navigation", { name: "Primary" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "发现" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "问答" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "创作" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "商城" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "搜索" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "首页" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "墨问" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "知选" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "实验室" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "全局搜索" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("搜索话题、商品或 AI...")).toBeInTheDocument();
   });
 
   it("renders the desktop register shell with stepper, social row, terms, and brand panel", () => {
@@ -144,5 +145,29 @@ describe("AuthPage shell", () => {
     expect(screen.getByLabelText("用户名或邮箱")).toHaveValue("zxzxxwc");
     expect(loginWithPassword).not.toHaveBeenCalled();
     expect(useAuthStore.getState().status).toBe("anonymous");
+  });
+
+  it("renders a challenge widget instead of the old text token input after challenge escalation", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(loginWithPassword).mockRejectedValueOnce(
+      new ApiClientError("A0410", "challenge required")
+    );
+
+    renderWithRouter("/auth?mode=login", [
+      {
+        path: "/auth",
+        element: <AuthLayout />,
+        children: [{ index: true, element: <AuthPage /> }]
+      }
+    ]);
+
+    await user.type(screen.getByLabelText("用户名或邮箱"), "alice");
+    await user.type(screen.getByLabelText("密码"), "Secret123!");
+    await user.click(screen.getByRole("button", { name: "登录 MOZhi" }));
+
+    expect(await screen.findByTestId("auth-challenge-widget")).toBeInTheDocument();
+    expect(screen.queryByLabelText("验证口令")).not.toBeInTheDocument();
+    expect(screen.queryByText(/dev-pass/i)).not.toBeInTheDocument();
   });
 });

@@ -2,10 +2,14 @@ package cn.zy.mozhi.app.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 @ConfigurationProperties(prefix = "mozhi.auth")
 public class AuthSecurityProperties {
 
-    private boolean cookieSecure = false;
+    private boolean cookieSecure = true;
     private final Challenge challenge = new Challenge();
     private final Limits limits = new Limits();
 
@@ -27,8 +31,8 @@ public class AuthSecurityProperties {
 
     public static class Challenge {
 
-        private String provider = "noop";
-        private String noopPassToken = "dev-pass";
+        private String provider = "turnstile";
+        private final Turnstile turnstile = new Turnstile();
 
         public String getProvider() {
             return provider;
@@ -38,12 +42,57 @@ public class AuthSecurityProperties {
             this.provider = provider;
         }
 
-        public String getNoopPassToken() {
-            return noopPassToken;
+        public Turnstile getTurnstile() {
+            return turnstile;
         }
 
-        public void setNoopPassToken(String noopPassToken) {
-            this.noopPassToken = noopPassToken;
+        public static class Turnstile {
+
+            private String secretKey = "";
+            private String siteVerifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+            private List<String> allowedHostnames = new ArrayList<>();
+            private Duration connectTimeout = Duration.ofSeconds(3);
+            private Duration readTimeout = Duration.ofSeconds(3);
+
+            public String getSecretKey() {
+                return secretKey;
+            }
+
+            public void setSecretKey(String secretKey) {
+                this.secretKey = secretKey;
+            }
+
+            public String getSiteVerifyUrl() {
+                return siteVerifyUrl;
+            }
+
+            public void setSiteVerifyUrl(String siteVerifyUrl) {
+                this.siteVerifyUrl = siteVerifyUrl;
+            }
+
+            public List<String> getAllowedHostnames() {
+                return allowedHostnames;
+            }
+
+            public void setAllowedHostnames(List<String> allowedHostnames) {
+                this.allowedHostnames = allowedHostnames;
+            }
+
+            public Duration getConnectTimeout() {
+                return connectTimeout;
+            }
+
+            public void setConnectTimeout(Duration connectTimeout) {
+                this.connectTimeout = connectTimeout;
+            }
+
+            public Duration getReadTimeout() {
+                return readTimeout;
+            }
+
+            public void setReadTimeout(Duration readTimeout) {
+                this.readTimeout = readTimeout;
+            }
         }
     }
 

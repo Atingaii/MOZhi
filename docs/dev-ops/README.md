@@ -43,15 +43,22 @@ The backend auth flow now uses:
 Relevant environment variables:
 
 - `MOZHI_AUTH_COOKIE_SECURE`
-  Set to `false` for local HTTP development and `true` behind HTTPS.
+  Set to `false` for local HTTP development and `true` behind HTTPS. The repository default now targets the secure shape.
 - `MOZHI_AUTH_CHALLENGE_PROVIDER`
-  Defaults to `noop` for local challenge escalation verification.
-- `MOZHI_AUTH_CHALLENGE_NOOP_PASS_TOKEN`
-  Pass token used by the `noop` provider. Default is `dev-pass`.
+  Defaults to `turnstile`.
+- `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
+  Backend-only Turnstile secret key. Never commit it.
+- `MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES`
+  Comma-separated hostname allow-list used after server-side verification.
+- `VITE_TURNSTILE_SITE_KEY`
+  Frontend Turnstile site key.
 
 Example local startup:
 
 ```powershell
 $env:MOZHI_AUTH_COOKIE_SECURE = "false"
+$env:MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES = "localhost,127.0.0.1"
 .\app\start.ps1
 ```
+
+For local development, use Cloudflare test keys or real keys explicitly bound to `localhost` / `127.0.0.1`.

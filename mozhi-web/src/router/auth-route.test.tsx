@@ -1,28 +1,27 @@
-import { MemoryRouter } from "react-router-dom";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 
 import AuthLayout from "@/layouts/AuthLayout";
+import { renderWithRouter } from "@/test/renderWithRouter";
 
 describe("Auth route shell", () => {
   it("renders a minimal auth navbar without the main shell footer", () => {
-    render(
-      <MemoryRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-        initialEntries={["/auth?mode=register"]}
-      >
-        <AuthLayout />
-      </MemoryRouter>
-    );
+    const { container } = renderWithRouter("/auth?mode=register", [
+      {
+        path: "/auth",
+        element: <AuthLayout />,
+        children: [{ index: true, element: <div>auth body</div> }]
+      }
+    ]);
 
     expect(screen.getByRole("link", { name: /MOZhi/i })).toBeInTheDocument();
+    expect(screen.getByText("auth body")).toBeInTheDocument();
     expect(
       screen.queryByText(/Built for content, knowledge, community, and commerce/i)
     ).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "全局搜索" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("搜索话题、商品或 AI...")).toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText(/搜索专题、问答、创作者或商品/i)
-    ).not.toBeInTheDocument();
+      container.querySelector('.mozhi-route-transition[data-route-key="/auth"]')
+    ).toBeInTheDocument();
   });
 });

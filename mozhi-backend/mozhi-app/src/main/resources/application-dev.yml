@@ -10,3 +10,11 @@ spring:
       port: ${REDIS_PORT:16379}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:19092}
+
+mozhi:
+  auth:
+    cookie-secure: ${MOZHI_AUTH_COOKIE_SECURE:false}
+    challenge:
+      provider: ${MOZHI_AUTH_CHALLENGE_PROVIDER:turnstile}
+      turnstile:
+        allowed-hostnames: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:localhost,127.0.0.1}

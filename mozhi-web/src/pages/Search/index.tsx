@@ -1,5 +1,5 @@
-import { useDeferredValue, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { searchDiscoverySnapshot, type SearchLane } from "@/api/modules/search";
 import { useSearchDiscoveryQuery } from "@/hooks/useSearchDiscoveryQuery";
@@ -17,9 +17,15 @@ function laneLabel(kind: Exclude<SearchLane, "all">) {
 
 export default function SearchPage() {
   const { data } = useSearchDiscoveryQuery();
-  const [query, setQuery] = useState(searchDiscoverySnapshot.workspace.initialQuery);
+  const [searchParams] = useSearchParams();
+  const routeQuery = searchParams.get("q");
+  const [query, setQuery] = useState(routeQuery ?? searchDiscoverySnapshot.workspace.initialQuery);
   const [activeLane, setActiveLane] = useState<SearchLane>("all");
   const deferredQuery = useDeferredValue(query);
+
+  useEffect(() => {
+    setQuery(routeQuery ?? searchDiscoverySnapshot.workspace.initialQuery);
+  }, [routeQuery]);
 
   const filteredResults = useMemo(() => {
     if (!data) {

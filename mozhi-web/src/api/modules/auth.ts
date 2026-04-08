@@ -59,3 +59,10 @@ export async function logoutCurrentSession() {
     withCredentials: true
   });
 }
+
+export async function logoutAllSessions() {
+  return postApi<void>(`${authEndpoints.logout}/all`, undefined, {
+    skipAuthRefresh: true,
+    withCredentials: true
+  });
+}
