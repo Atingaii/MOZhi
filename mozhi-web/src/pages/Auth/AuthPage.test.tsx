@@ -73,8 +73,10 @@ describe("AuthPage shell", () => {
     expect(screen.getByText("开启")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Google" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /服务条款/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("确认密码")).toBeInTheDocument();
     expect(screen.getByText(/成员加入/i, { selector: "p" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "显示密码" }).querySelector("svg")).not.toBeNull();
+    expect(screen.getAllByRole("button", { name: "显示密码" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "显示密码" })[0]?.querySelector("svg")).not.toBeNull();
     expect(container.querySelectorAll(".mozhi-auth-feature-icon svg")).toHaveLength(3);
     expect(screen.queryByText("✍️")).not.toBeInTheDocument();
     expect(screen.queryByText("🛡️")).not.toBeInTheDocument();
@@ -115,6 +117,7 @@ describe("AuthPage shell", () => {
     await user.type(screen.getByLabelText("昵称"), "zzxxcqacac");
     await user.type(screen.getByLabelText("邮箱地址"), "ssss@163.com");
     await user.type(screen.getByLabelText("设置密码"), "xxxxxxxx");
+    await user.type(screen.getByLabelText("确认密码"), "xxxxxxxx");
     await user.click(screen.getByRole("checkbox", { name: /服务条款/i }));
     await user.click(screen.getByRole("button", { name: "注册 MOZhi 账号" }));
 
@@ -139,6 +142,7 @@ describe("AuthPage shell", () => {
     await user.type(screen.getByLabelText("昵称"), "zzxxcqacac");
     await user.type(screen.getByLabelText("邮箱地址"), "ssss@163.com");
     await user.type(screen.getByLabelText("设置密码"), "xxxxxxxx");
+    await user.type(screen.getByLabelText("确认密码"), "xxxxxxxx");
     await user.click(screen.getByRole("checkbox", { name: /服务条款/i }));
     await user.click(screen.getByRole("button", { name: "注册 MOZhi 账号" }));
 
@@ -149,6 +153,29 @@ describe("AuthPage shell", () => {
     expect(screen.getByLabelText("用户名或邮箱")).toHaveValue("zxzxxwc");
     expect(loginWithPassword).not.toHaveBeenCalled();
     expect(useAuthStore.getState().status).toBe("anonymous");
+  });
+
+  it("blocks registration when password confirmation does not match", async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter("/auth?mode=register", [
+      {
+        path: "/auth",
+        element: <AuthLayout />,
+        children: [{ index: true, element: <AuthPage /> }]
+      }
+    ]);
+
+    await user.type(screen.getByLabelText("用户名"), "ating");
+    await user.type(screen.getByLabelText("昵称"), "zzz");
+    await user.type(screen.getByLabelText("邮箱地址"), "123ee@123.com");
+    await user.type(screen.getByLabelText("设置密码"), "1314521yang");
+    await user.type(screen.getByLabelText("确认密码"), "1314521yangx");
+    await user.click(screen.getByRole("checkbox", { name: /服务条款/i }));
+    await user.click(screen.getByRole("button", { name: "注册 MOZhi 账号" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("两次输入的密码不一致，请重新确认。");
+    expect(registerAccount).not.toHaveBeenCalled();
   });
 
   it("renders a challenge widget instead of the old text token input after challenge escalation", async () => {

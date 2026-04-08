@@ -155,11 +155,13 @@ export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>(() => resolveMode(searchParams.get("mode")));
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [challengeToken, setChallengeToken] = useState("");
   const [challengeResetSignal, setChallengeResetSignal] = useState(0);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const redirectTo = useMemo(() => searchParams.get("redirect") ?? "/profile", [searchParams]);
@@ -210,16 +212,19 @@ export default function AuthPage() {
         setMode("login");
         setIdentifier(result.identifier);
         setPassword("");
+        setConfirmPassword("");
         setEmail("");
         setNickname("");
         setChallengeToken("");
         setChallengeResetSignal((current) => current + 1);
         setPasswordVisible(false);
         setInfoMessage("注册成功，请使用刚创建的账号登录。");
+        setValidationMessage(null);
         return;
       }
 
       setInfoMessage(null);
+      setValidationMessage(null);
       markAuthenticated(result.session.accessToken);
       navigate(redirectTo, { replace: true });
     }
@@ -246,8 +251,9 @@ export default function AuthPage() {
   const subtitleAction = mode === "register" ? "立即登录" : "立即注册";
   const title = mode === "register" ? "开启你的创作之旅" : "欢迎回到 MOZhi";
   const passwordPlaceholder = mode === "register" ? "至少 8 位" : "请输入密码";
-  const helperMessage =
-    requiresChallenge && turnstileSiteKey.trim().length === 0
+  const helperMessage = validationMessage
+    ? validationMessage
+    : requiresChallenge && turnstileSiteKey.trim().length === 0
       ? "当前环境未配置 Turnstile 站点密钥，请补充 VITE_TURNSTILE_SITE_KEY，或在本地开发环境启用后端 challenge 降级后重试。"
       : resolveAuthHelperMessage(apiError, infoMessage);
 
@@ -258,17 +264,26 @@ export default function AuthPage() {
     setMode(nextMode);
     setIdentifier("");
     setPassword("");
+    setConfirmPassword("");
     setEmail("");
     setNickname("");
     setChallengeToken("");
     setChallengeResetSignal((current) => current + 1);
     setPasswordVisible(false);
     setInfoMessage(null);
+    setValidationMessage(null);
     authMutation.reset();
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (mode === "register" && password !== confirmPassword) {
+      setValidationMessage("两次输入的密码不一致，请重新确认。");
+      return;
+    }
+
+    setValidationMessage(null);
     authMutation.mutate();
   }
 
@@ -334,7 +349,10 @@ export default function AuthPage() {
                     <input
                       autoComplete="username"
                       className="mozhi-auth-input"
-                      onChange={(event) => setIdentifier(event.target.value)}
+                      onChange={(event) => {
+                        setIdentifier(event.target.value);
+                        setValidationMessage(null);
+                      }}
                       placeholder="唯一标识"
                       required
                       value={identifier}
@@ -345,7 +363,10 @@ export default function AuthPage() {
                     <input
                       autoComplete="nickname"
                       className="mozhi-auth-input"
-                      onChange={(event) => setNickname(event.target.value)}
+                      onChange={(event) => {
+                        setNickname(event.target.value);
+                        setValidationMessage(null);
+                      }}
                       placeholder="如何称呼你"
                       value={nickname}
                     />
@@ -357,7 +378,10 @@ export default function AuthPage() {
                   <input
                     autoComplete="username"
                     className="mozhi-auth-input"
-                    onChange={(event) => setIdentifier(event.target.value)}
+                    onChange={(event) => {
+                      setIdentifier(event.target.value);
+                      setValidationMessage(null);
+                    }}
                     placeholder="alice 或 alice@mozhi.dev"
                     required
                     value={identifier}
@@ -371,7 +395,10 @@ export default function AuthPage() {
                   <input
                     autoComplete="email"
                     className="mozhi-auth-input"
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setValidationMessage(null);
+                    }}
                     placeholder="you@example.com"
                     required
                     type="email"
@@ -386,7 +413,10 @@ export default function AuthPage() {
                   <input
                     autoComplete={mode === "register" ? "new-password" : "current-password"}
                     className="mozhi-auth-input mozhi-auth-password-input"
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      setValidationMessage(null);
+                    }}
                     placeholder={passwordPlaceholder}
                     required
                     type={passwordVisible ? "text" : "password"}
@@ -413,6 +443,34 @@ export default function AuthPage() {
                 ) : null}
               </label>
 
+              {mode === "register" ? (
+                <label className="mozhi-auth-field">
+                  <span className="mozhi-auth-field-label">确认密码</span>
+                  <div className="mozhi-auth-password-shell">
+                    <input
+                      autoComplete="new-password"
+                      className="mozhi-auth-input mozhi-auth-password-input"
+                      onChange={(event) => {
+                        setConfirmPassword(event.target.value);
+                        setValidationMessage(null);
+                      }}
+                      placeholder="再次输入密码"
+                      required
+                      type={passwordVisible ? "text" : "password"}
+                      value={confirmPassword}
+                    />
+                    <button
+                      aria-label={passwordVisible ? "隐藏密码" : "显示密码"}
+                      className="mozhi-auth-password-toggle"
+                      onClick={() => setPasswordVisible((visible) => !visible)}
+                      type="button"
+                    >
+                      <PasswordToggleIcon visible={passwordVisible} />
+                    </button>
+                  </div>
+                </label>
+              ) : null}
+
               {requiresChallenge ? (
                 <AuthChallengeWidget
                   onTokenChange={setChallengeToken}
@@ -424,13 +482,13 @@ export default function AuthPage() {
               {helperMessage ? (
                 <p
                   className={`mozhi-auth-status ${
-                    apiError
+                    validationMessage || apiError
                       ? isRateLimited
                         ? "is-warning"
                         : "is-error"
                       : "is-info"
                   }`}
-                  role={apiError ? "alert" : "status"}
+                  role={validationMessage || apiError ? "alert" : "status"}
                 >
                   {helperMessage}
                 </p>
