@@ -1,0 +1,13 @@
+.git
+.idea
+.playwright-mcp
+.superpowers
+logs
+docs/dev-ops/app/mozhi-app.pid
+mozhi-web/node_modules
+mozhi-web/dist
+mozhi-web/.vite
+mozhi-web/*.tsbuildinfo
+mozhi-backend/**/target
+mozhi-backend/.tmp
+mozhi-backend/mozhi-app/.tmp

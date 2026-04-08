@@ -168,6 +168,34 @@ $env:MOZHI_STORAGE_MINIO_ENABLED = "true"
 
 在这个模式下，启动脚本会自动初始化 `mozhi-assets` bucket，并开启公开读权限。
 
+### 2A. 使用本地 Docker 版一键启动
+
+如果你希望降低本机环境依赖，直接通过 Docker 运行前端、后端和中间件，可使用：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up --build
+```
+
+这个组合会启动：
+
+- MySQL / Redis / Kafka / MinIO
+- Spring Boot 后端容器
+- Vite 前端容器
+
+访问地址：
+
+- 前端：`http://127.0.0.1:5173/`
+- 后端：`http://127.0.0.1:8090/api/health`
+- Swagger：`http://127.0.0.1:8090/swagger-ui/index.html`
+
+停止命令：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
+```
+
+这个本地 Docker 版故意不包含 Nginx。原因是本地开发更看重最快启动和最直接的排障路径，前后端分别暴露端口更简单；Nginx 更适合放到后续的预发 / 生产部署方案中。
+
 ### 3. 启动前端
 
 进入前端目录：
@@ -221,6 +249,13 @@ $env:MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES = "localhost,127.0.0.1"
 ```
 
 本地开发可使用 Cloudflare Turnstile 测试 key，或者将真实 key 绑定到 `localhost/127.0.0.1` 后再运行。后端始终做 server-side 校验，并按 allow-list 校验返回的 `hostname`。
+
+本地 Docker 版同样需要通过宿主机环境变量或 `.env` 文件提供：
+
+- `VITE_TURNSTILE_SITE_KEY`
+- `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
+
+这两个值都不应提交到版本库。
 
 ## 本地服务与端口
 

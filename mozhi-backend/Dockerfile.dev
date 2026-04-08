@@ -1,0 +1,23 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+
+COPY mozhi-backend/pom.xml ./mozhi-backend/pom.xml
+COPY mozhi-backend/mozhi-api/pom.xml ./mozhi-backend/mozhi-api/pom.xml
+COPY mozhi-backend/mozhi-app/pom.xml ./mozhi-backend/mozhi-app/pom.xml
+COPY mozhi-backend/mozhi-domain/pom.xml ./mozhi-backend/mozhi-domain/pom.xml
+COPY mozhi-backend/mozhi-infrastructure/pom.xml ./mozhi-backend/mozhi-infrastructure/pom.xml
+COPY mozhi-backend/mozhi-trigger/pom.xml ./mozhi-backend/mozhi-trigger/pom.xml
+COPY mozhi-backend/mozhi-types/pom.xml ./mozhi-backend/mozhi-types/pom.xml
+
+COPY mozhi-backend ./mozhi-backend
+
+RUN mvn -q -f ./mozhi-backend/pom.xml -pl mozhi-app -am package -DskipTests
+
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+COPY --from=build /workspace/mozhi-backend/mozhi-app/target/mozhi-app-1.0.0-SNAPSHOT.jar ./mozhi-app.jar
+
+EXPOSE 8090
+
+ENTRYPOINT ["java", "-jar", "/app/mozhi-app.jar", "--spring.profiles.active=dev"]

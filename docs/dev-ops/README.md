@@ -7,6 +7,7 @@ locking the team into runtime details too early.
 ## Included
 
 - `docker-compose-environment.yml`: local MySQL, Redis, Kafka, MinIO.
+- `docker-compose-local.yml`: local frontend + backend runtime without Nginx.
 - `docker-compose-app.yml`: placeholder application runtime wiring.
 - `mysql/`: base MySQL configuration and SQL bootstrap slot.
 - `redis/`: base Redis configuration.
@@ -20,6 +21,35 @@ locking the team into runtime details too early.
 The startup script packages `mozhi-backend/mozhi-app`, starts the Docker middleware
 set, launches the Spring Boot jar in the background, and writes logs to the repo
 root `logs/` directory.
+
+## Local Docker Runtime
+
+If you want a host-light local runtime with Docker managing frontend, backend, and
+middleware together, run:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up --build
+```
+
+This local stack intentionally does **not** include Nginx.
+
+Reasoning:
+
+- the local goal is fastest startup and easiest debugging
+- exposing frontend and backend on separate ports keeps failures obvious
+- Nginx belongs in a later production-oriented compose profile, not the default local path
+
+Local Docker URLs:
+
+- Frontend: `http://127.0.0.1:5173`
+- Backend: `http://127.0.0.1:8090/api/health`
+- Swagger: `http://127.0.0.1:8090/swagger-ui/index.html`
+
+Stop command:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
+```
 
 ## MinIO Direct Upload
 
@@ -53,6 +83,11 @@ Relevant environment variables:
 - `VITE_TURNSTILE_SITE_KEY`
   Frontend Turnstile site key.
 
+The local Docker runtime also reads:
+
+- `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
+- `VITE_TURNSTILE_SITE_KEY`
+
 Example local startup:
 
 ```powershell
@@ -62,3 +97,4 @@ $env:MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES = "localhost,127.0.0.1"
 ```
 
 For local development, use Cloudflare test keys or real keys explicitly bound to `localhost` / `127.0.0.1`.
+Never commit secret values into the repository.

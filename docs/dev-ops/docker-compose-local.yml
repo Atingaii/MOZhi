@@ -1,0 +1,44 @@
+services:
+  mozhi-backend:
+    build:
+      context: ../..
+      dockerfile: mozhi-backend/Dockerfile.dev
+    container_name: mozhi-backend-dev
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: mozhi
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MOZHI_AUTH_COOKIE_SECURE: "false"
+      MOZHI_AUTH_CHALLENGE_PROVIDER: turnstile
+      MOZHI_AUTH_TURNSTILE_SECRET_KEY: ${MOZHI_AUTH_TURNSTILE_SECRET_KEY:-}
+      MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:-localhost,127.0.0.1}
+      MOZHI_STORAGE_MINIO_ENABLED: "false"
+    ports:
+      - "8090:8090"
+
+  mozhi-web:
+    build:
+      context: ../..
+      dockerfile: mozhi-web/Dockerfile.dev
+    container_name: mozhi-web-dev
+    restart: unless-stopped
+    depends_on:
+      - mozhi-backend
+    environment:
+      VITE_API_BASE_URL: http://127.0.0.1:8090/api
+      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+    ports:
+      - "5173:5173"

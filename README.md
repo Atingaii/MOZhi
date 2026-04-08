@@ -93,6 +93,28 @@ npm run dev
 
 - Frontend: `http://127.0.0.1:5173/`
 
+### 本地 Docker 一键启动
+
+如果你希望在宿主机不额外安装 Java / Node 的情况下直接跑起项目，可使用本地 Docker 版：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up --build
+```
+
+启动后可访问：
+
+- Frontend: `http://127.0.0.1:5173/`
+- Backend API: `http://127.0.0.1:8090/api/health`
+- Swagger UI: `http://127.0.0.1:8090/swagger-ui/index.html`
+
+停止命令：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
+```
+
+本地 Docker 版刻意不引入 Nginx，目的是保持最快启动路径和最低排障成本；如果后续需要单入口、HTTPS 和静态资源反向代理，再补独立的生产版部署配置。
+
 ## 认证会话模型
 
 - `accessToken` 只保存在前端内存，不写入 `localStorage`
