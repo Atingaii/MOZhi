@@ -26,6 +26,9 @@ services:
       MOZHI_AUTH_TURNSTILE_SECRET_KEY: ${MOZHI_AUTH_TURNSTILE_SECRET_KEY:-}
       MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:-localhost,127.0.0.1}
       MOZHI_STORAGE_MINIO_ENABLED: "false"
+    volumes:
+      - ../../mozhi-backend:/workspace/mozhi-backend
+      - mozhi-backend-m2:/root/.m2
     ports:
       - "8090:8090"
 
@@ -40,5 +43,14 @@ services:
     environment:
       VITE_API_BASE_URL: http://127.0.0.1:8090/api
       VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+    volumes:
+      - ../../mozhi-web:/workspace/mozhi-web
+      - mozhi-web-node-modules:/workspace/mozhi-web/node_modules
     ports:
       - "5173:5173"
+
+volumes:
+  mozhi-backend-m2:
+  mozhi-web-node-modules:

@@ -26,10 +26,16 @@ root `logs/` directory.
 ## Local Docker Runtime
 
 If you want a host-light local runtime with Docker managing frontend, backend, and
-middleware together, run:
+middleware together, the first startup should run:
 
 ```powershell
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up --build
+```
+
+For day-to-day development, use:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up
 ```
 
 This local stack intentionally does **not** include Nginx.
@@ -51,6 +57,12 @@ Stop command:
 ```powershell
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
 ```
+
+源文件修改后：
+
+- frontend source changes trigger Vite hot reload immediately
+- backend source, mapper, and YML changes trigger an automatic package + app restart inside the dev container
+- changes to Dockerfiles or base image layers still require `--build`
 
 ## Production-Oriented Docker Runtime
 

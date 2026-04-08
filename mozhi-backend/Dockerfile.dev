@@ -1,23 +1,11 @@
-FROM maven:3.9.9-eclipse-temurin-21 AS build
-WORKDIR /workspace
+FROM maven:3.9.9-eclipse-temurin-21
 
-COPY mozhi-backend/pom.xml ./mozhi-backend/pom.xml
-COPY mozhi-backend/mozhi-api/pom.xml ./mozhi-backend/mozhi-api/pom.xml
-COPY mozhi-backend/mozhi-app/pom.xml ./mozhi-backend/mozhi-app/pom.xml
-COPY mozhi-backend/mozhi-domain/pom.xml ./mozhi-backend/mozhi-domain/pom.xml
-COPY mozhi-backend/mozhi-infrastructure/pom.xml ./mozhi-backend/mozhi-infrastructure/pom.xml
-COPY mozhi-backend/mozhi-trigger/pom.xml ./mozhi-backend/mozhi-trigger/pom.xml
-COPY mozhi-backend/mozhi-types/pom.xml ./mozhi-backend/mozhi-types/pom.xml
+WORKDIR /workspace/mozhi-backend
 
-COPY mozhi-backend ./mozhi-backend
-
-RUN mvn -q -f ./mozhi-backend/pom.xml -pl mozhi-app -am package -DskipTests
-
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-
-COPY --from=build /workspace/mozhi-backend/mozhi-app/target/mozhi-app-1.0.0-SNAPSHOT.jar ./mozhi-app.jar
+RUN apt-get update \
+    && apt-get install -y entr --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8090
 
-ENTRYPOINT ["java", "-jar", "/app/mozhi-app.jar", "--spring.profiles.active=dev"]
+CMD ["sh", "-lc", "while true; do find . \\( -path './*/target' -o -path './.git' -o -path './.idea' \\) -prune -o \\( -name '*.java' -o -name '*.xml' -o -name '*.yml' -o -name '*.yaml' -o -name 'pom.xml' \\) -print | entr -rnz sh -lc 'mvn -q -pl mozhi-app -am package -Dmaven.test.skip=true && java -jar mozhi-app/target/mozhi-app-1.0.0-SNAPSHOT.jar --spring.profiles.active=dev'; sleep 2; done"]

@@ -1,11 +1,7 @@
 FROM node:22-alpine
-WORKDIR /app
 
-COPY mozhi-web/package.json mozhi-web/package-lock.json ./
-RUN npm ci
-
-COPY mozhi-web ./
+WORKDIR /workspace/mozhi-web
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["sh", "-lc", "LOCK_HASH_FILE=node_modules/.mozhi-package-lock.sha256; CURRENT_HASH=$(sha256sum package-lock.json | awk '{print $1}'); SAVED_HASH=$(cat \"$LOCK_HASH_FILE\" 2>/dev/null || true); if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ] || [ \"$CURRENT_HASH\" != \"$SAVED_HASH\" ]; then npm ci && printf '%s' \"$CURRENT_HASH\" > \"$LOCK_HASH_FILE\"; fi && npm run dev -- --host 0.0.0.0 --port 5173"]

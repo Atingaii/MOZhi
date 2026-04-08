@@ -95,10 +95,18 @@ npm run dev
 
 ### 本地 Docker 一键启动
 
-如果你希望在宿主机不额外安装 Java / Node 的情况下直接跑起项目，可使用本地 Docker 版：
+如果你希望在宿主机不额外安装 Java / Node 的情况下直接跑起项目，可使用本地 Docker 开发版。
+
+首次启动或修改了 `Dockerfile` 后执行：
 
 ```powershell
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up --build
+```
+
+日常开发只需：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml up
 ```
 
 启动后可访问：
@@ -106,6 +114,13 @@ docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-op
 - Frontend: `http://127.0.0.1:5173/`
 - Backend API: `http://127.0.0.1:8090/api/health`
 - Swagger UI: `http://127.0.0.1:8090/swagger-ui/index.html`
+
+源文件修改后：
+
+- 前端会通过 Vite 直接热更新
+- 后端会在容器内自动重新打包并重启应用进程
+
+只有在修改基础镜像、`Dockerfile` 或需要强制重装容器环境时，才需要重新带上 `--build`。
 
 停止命令：
 
