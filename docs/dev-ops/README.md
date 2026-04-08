@@ -8,7 +8,8 @@ locking the team into runtime details too early.
 
 - `docker-compose-environment.yml`: local MySQL, Redis, Kafka, MinIO.
 - `docker-compose-local.yml`: local frontend + backend runtime without Nginx.
-- `docker-compose-app.yml`: placeholder application runtime wiring.
+- `docker-compose-app.yml`: production-oriented runtime with Nginx as the single entrypoint.
+- `nginx/`: reverse-proxy config for static frontend delivery and backend proxying.
 - `mysql/`: base MySQL configuration and SQL bootstrap slot.
 - `redis/`: base Redis configuration.
 - `app/`: Windows-oriented helper scripts for local startup and shutdown.
@@ -51,6 +52,41 @@ Stop command:
 docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-local.yml down
 ```
 
+## Production-Oriented Docker Runtime
+
+For a single-entry deployment shape with Nginx in front of the frontend and backend:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-app.yml up --build -d
+```
+
+This stack uses:
+
+- a Spring Boot backend container
+- an Nginx gateway container
+- frontend static assets built into the gateway image
+
+URLs:
+
+- Site entry: `http://127.0.0.1:8080`
+- Backend health through gateway: `http://127.0.0.1:8080/api/health`
+- Swagger through gateway: `http://127.0.0.1:8080/swagger-ui/index.html`
+
+Stop command:
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-app.yml down
+```
+
+Implementation note:
+
+- local runtime keeps frontend and backend on separate ports for easier debugging
+- production-oriented runtime adds Nginx for a single entrypoint and reverse proxy behavior
+- the compose file defaults `MOZHI_AUTH_COOKIE_SECURE=false` only so plain HTTP local verification remains usable
+- real HTTPS deployment should override `MOZHI_AUTH_COOKIE_SECURE=true`
+
+If you keep the local runtime and the production-oriented runtime up at the same time, Docker Compose may warn that the other overlay's app containers are "orphans". That is expected because both overlays share the same project name and middleware services. Do not add `--remove-orphans` unless you explicitly want to tear down the other runtime shape.
+
 ## MinIO Direct Upload
 
 To verify the real avatar direct-upload path instead of the local mock fallback:
@@ -87,6 +123,11 @@ The local Docker runtime also reads:
 
 - `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
 - `VITE_TURNSTILE_SITE_KEY`
+
+The production-oriented runtime additionally uses:
+
+- `VITE_TURNSTILE_SITE_KEY` as a frontend build arg
+- `MOZHI_STORAGE_LOCAL_PUBLIC_ENDPOINT` if local storage mock URLs should resolve through the gateway entrypoint
 
 Example local startup:
 

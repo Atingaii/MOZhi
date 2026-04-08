@@ -115,6 +115,22 @@ docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-op
 
 本地 Docker 版刻意不引入 Nginx，目的是保持最快启动路径和最低排障成本；如果后续需要单入口、HTTPS 和静态资源反向代理，再补独立的生产版部署配置。
 
+### 生产版 Docker 入口
+
+如果你希望用更接近真实部署的方式运行项目，可使用 `Nginx + 前端静态资源 + 后端容器` 组合：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-app.yml up --build -d
+```
+
+默认入口：
+
+- 站点入口：`http://127.0.0.1:8080/`
+- API 健康检查：`http://127.0.0.1:8080/api/health`
+- Swagger：`http://127.0.0.1:8080/swagger-ui/index.html`
+
+这个版本会通过 Nginx 统一入口代理前端静态资源和后端 `/api`、`/swagger-ui` 请求，更接近预发 / 生产部署形态。
+
 ## 认证会话模型
 
 - `accessToken` 只保存在前端内存，不写入 `localStorage`

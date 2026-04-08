@@ -196,6 +196,45 @@ docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-op
 
 这个本地 Docker 版故意不包含 Nginx。原因是本地开发更看重最快启动和最直接的排障路径，前后端分别暴露端口更简单；Nginx 更适合放到后续的预发 / 生产部署方案中。
 
+### 2B. 使用生产版 Docker 入口
+
+如果你希望以更接近真实部署的单入口方式运行项目，可使用：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-app.yml up --build -d
+```
+
+这个组合会启动：
+
+- MySQL / Redis / Kafka / MinIO
+- Spring Boot 后端容器
+- Nginx 网关容器
+
+其中：
+
+- 前端会在构建阶段打成静态资源
+- Nginx 负责统一提供前端页面
+- `/api`、`/swagger-ui`、`/actuator/health` 会反向代理到后端
+
+访问地址：
+
+- 站点入口：`http://127.0.0.1:8080/`
+- API 健康检查：`http://127.0.0.1:8080/api/health`
+- Swagger：`http://127.0.0.1:8080/swagger-ui/index.html`
+
+停止命令：
+
+```powershell
+docker compose -f .\docs\dev-ops\docker-compose-environment.yml -f .\docs\dev-ops\docker-compose-app.yml down
+```
+
+说明：
+
+- 本地开发版不带 Nginx，适合调试
+- 生产版 Docker 入口带 Nginx，适合验证单入口部署形态
+- 当前生产版 compose 为了便于本机 HTTP 验证，默认将 `MOZHI_AUTH_COOKIE_SECURE` 设为 `false`
+- 真正部署到 HTTPS 环境时，应显式覆盖为 `true`
+
 ### 3. 启动前端
 
 进入前端目录：
@@ -256,6 +295,17 @@ $env:MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES = "localhost,127.0.0.1"
 - `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
 
 这两个值都不应提交到版本库。
+
+生产版 Docker 入口还会在前端构建期读取：
+
+- `VITE_TURNSTILE_SITE_KEY`
+
+并在后端运行期读取：
+
+- `MOZHI_AUTH_TURNSTILE_SECRET_KEY`
+- `MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES`
+
+如果你在本机通过 `http://127.0.0.1:8080` 验证认证链路，建议将 hostname 白名单包含 `localhost,127.0.0.1`。
 
 ## 本地服务与端口
 

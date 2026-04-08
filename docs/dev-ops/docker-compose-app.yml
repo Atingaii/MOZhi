@@ -1,14 +1,18 @@
-version: "3.9"
-
 services:
-  mozhi-app:
-    image: system/mozhi-app:1.0.0
-    container_name: mozhi-app
-    restart: on-failure
-    ports:
-      - "8090:8090"
+  mozhi-backend-prod:
+    build:
+      context: ../..
+      dockerfile: mozhi-backend/Dockerfile.prod
+    container_name: mozhi-backend-prod
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_DATABASE: mozhi
@@ -17,6 +21,23 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-    volumes:
-      - ../../logs:/data/log
+      MOZHI_AUTH_COOKIE_SECURE: ${MOZHI_AUTH_COOKIE_SECURE:-false}
+      MOZHI_AUTH_CHALLENGE_PROVIDER: turnstile
+      MOZHI_AUTH_TURNSTILE_SECRET_KEY: ${MOZHI_AUTH_TURNSTILE_SECRET_KEY:-}
+      MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES: ${MOZHI_AUTH_TURNSTILE_ALLOWED_HOSTNAMES:-localhost,127.0.0.1}
+      MOZHI_STORAGE_MINIO_ENABLED: "false"
+      MOZHI_STORAGE_LOCAL_PUBLIC_ENDPOINT: ${MOZHI_STORAGE_LOCAL_PUBLIC_ENDPOINT:-http://127.0.0.1:8080}
 
+  mozhi-gateway:
+    build:
+      context: ../..
+      dockerfile: mozhi-web/Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
+    container_name: mozhi-gateway
+    restart: unless-stopped
+    depends_on:
+      - mozhi-backend-prod
+    ports:
+      - "8080:80"
