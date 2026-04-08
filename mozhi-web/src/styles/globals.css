@@ -14,21 +14,24 @@
   --bg-primary: #fafafa;
   --bg-secondary: #f4f4f5;
   --bg-card: #ffffff;
-  --border-color: #e4e4e7;
-  --border-hover: #a1a1aa;
+  --border-color: #dedee3;
+  --border-hover: #8f8f98;
   --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-tertiary: #71717a;
-  --text-muted: #a1a1aa;
+  --text-secondary: #3f3f46;
+  --text-tertiary: #63636b;
+  --text-muted: #8a8a96;
   --accent: #3b82f6;
   --accent-hover: #2563eb;
   --tag-bg: #f4f4f5;
   --tag-text: #52525b;
-  --nav-bg: rgba(250, 250, 250, 0.82);
+  --nav-bg: rgba(250, 250, 250, 0.96);
   --badge-bg: #ecfdf5;
   --badge-text: #059669;
   --badge-border: #a7f3d0;
   --code-bg: #f4f4f5;
+  --surface-raised: #ffffff;
+  --surface-muted: #fcfcfd;
+  --surface-subtle: #f3f4f6;
   --nav-pill-shadow: 0 12px 28px -24px rgba(15, 23, 42, 0.45);
   --scrollbar-thumb: rgba(15, 23, 42, 0.22);
   --scrollbar-thumb-hover: rgba(15, 23, 42, 0.34);
@@ -57,11 +60,14 @@ html.dark {
   --accent-hover: #93c5fd;
   --tag-bg: #18181b;
   --tag-text: #a1a1aa;
-  --nav-bg: rgba(9, 9, 11, 0.82);
+  --nav-bg: rgba(9, 9, 11, 0.96);
   --badge-bg: rgba(16, 185, 129, 0.1);
   --badge-text: #34d399;
   --badge-border: rgba(16, 185, 129, 0.2);
   --code-bg: #18181b;
+  --surface-raised: #111215;
+  --surface-muted: #14161a;
+  --surface-subtle: #191b20;
   --nav-pill-shadow: 0 14px 32px -26px rgba(15, 23, 42, 0.9);
   --scrollbar-thumb: rgba(244, 244, 245, 0.2);
   --scrollbar-thumb-hover: rgba(244, 244, 245, 0.34);
@@ -160,14 +166,13 @@ img {
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid #eee;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--nav-bg);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
 .mozhi-navbar-auth-surface {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--nav-bg);
 }
 
 .mozhi-navbar-inner {
@@ -216,14 +221,16 @@ img {
   width: 280px;
   max-width: 100%;
   padding: 8px 14px;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: #f5f5f5;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  background: var(--surface-subtle);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .mozhi-header-search-shell:focus-within {
-  background: #efefef;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.32);
+  background: var(--surface-raised);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .mozhi-header-search-icon {
@@ -462,7 +469,7 @@ img {
 .mozhi-home-description {
   max-width: 640px;
   margin: 24px 0 0;
-  color: #7a7d86;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.8;
 }
@@ -502,7 +509,7 @@ img {
 .mozhi-cta-secondary {
   border: 1px solid rgba(161, 161, 170, 0.28);
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  background: var(--surface-raised);
 }
 
 .mozhi-cta-tertiary {
@@ -529,7 +536,7 @@ img {
   padding: 14px 16px;
   border: 1px solid rgba(161, 161, 170, 0.16);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+  background: var(--surface-raised);
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.65;
@@ -543,10 +550,10 @@ img {
   border: 1px solid rgba(161, 161, 170, 0.18);
   border-radius: 30px;
   background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.11), transparent 36%),
-    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.12), transparent 32%),
-    var(--bg-card);
-  box-shadow: 0 26px 70px -54px rgba(15, 23, 42, 0.65);
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.09), transparent 30%),
+    var(--surface-raised);
+  box-shadow: 0 18px 44px -36px rgba(15, 23, 42, 0.18);
   overflow: hidden;
 }
 
@@ -592,7 +599,7 @@ img {
 .mozhi-home-editorial-card,
 .mozhi-home-rhythm-row {
   border: 1px solid rgba(161, 161, 170, 0.15);
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  background: var(--surface-muted);
 }
 
 .mozhi-home-stage-feature {
@@ -641,7 +648,7 @@ img {
 .mozhi-home-stage-card {
   padding: 18px 18px 20px;
   border-radius: 22px;
-  box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.44);
+  box-shadow: 0 14px 28px -26px rgba(15, 23, 42, 0.16);
 }
 
 .mozhi-home-stage-card-title {
@@ -669,13 +676,13 @@ img {
 .mozhi-home-lanes-card {
   padding: 22px;
   border-radius: 26px;
-  box-shadow: 0 20px 40px -36px rgba(15, 23, 42, 0.5);
+  box-shadow: 0 16px 34px -30px rgba(15, 23, 42, 0.18);
 }
 
 .mozhi-home-join-card {
   background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 36%),
-    var(--bg-card);
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 34%),
+    var(--surface-raised);
 }
 
 .mozhi-home-side-heading {
@@ -907,17 +914,17 @@ img {
 .mozhi-home-feed-card,
 .mozhi-home-feed-panel {
   border: 1px solid rgba(161, 161, 170, 0.16);
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
-  box-shadow: 0 22px 48px -40px rgba(15, 23, 42, 0.5);
+  background: var(--surface-muted);
+  box-shadow: 0 18px 40px -34px rgba(15, 23, 42, 0.18);
 }
 
 .mozhi-home-preview-feature {
   padding: 24px;
   border-radius: 28px;
   background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.12), transparent 30%),
-    color-mix(in srgb, var(--bg-card) 95%, transparent);
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.08), transparent 28%),
+    var(--surface-raised);
 }
 
 .mozhi-home-preview-feature h2 {
@@ -1245,7 +1252,7 @@ img {
   padding: 4px;
   border: 1px solid rgba(161, 161, 170, 0.18);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  background: var(--surface-raised);
 }
 
 .mozhi-home-feed-tab {
@@ -2055,8 +2062,8 @@ img {
   min-height: calc(100vh - 184px);
   border: 1px solid rgba(161, 161, 170, 0.16);
   border-radius: 32px;
-  background: color-mix(in srgb, var(--bg-card) 94%, transparent);
-  box-shadow: 0 26px 56px -46px rgba(15, 23, 42, 0.54);
+  background: var(--surface-raised);
+  box-shadow: 0 20px 48px -40px rgba(15, 23, 42, 0.18);
   overflow: hidden;
 }
 
@@ -2064,7 +2071,7 @@ img {
   padding: 42px 42px 46px;
   background:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 28%),
-    color-mix(in srgb, var(--bg-card) 98%, transparent);
+    var(--surface-raised);
 }
 
 .mozhi-auth-form-wrap {
@@ -2157,7 +2164,7 @@ img {
   margin-top: 28px;
   border: 1px solid rgba(161, 161, 170, 0.18);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-secondary) 74%, transparent);
+  background: var(--surface-subtle);
 }
 
 .mozhi-auth-mode-tab {
@@ -2242,7 +2249,7 @@ img {
   padding: 14px 16px;
   border: 1px solid rgba(161, 161, 170, 0.16);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  background: var(--surface-subtle);
 }
 
 .mozhi-auth-meta-strip span {
@@ -2265,9 +2272,9 @@ img {
   padding: 42px;
   border-left: 1px solid rgba(161, 161, 170, 0.12);
   background:
-    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.12), transparent 30%),
-    color-mix(in srgb, var(--bg-secondary) 76%, transparent);
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 26%),
+    radial-gradient(circle at bottom left, rgba(15, 118, 110, 0.08), transparent 28%),
+    var(--surface-subtle);
 }
 
 .mozhi-auth-brand-panel {
@@ -2280,8 +2287,8 @@ img {
   padding: 20px;
   border: 1px solid rgba(161, 161, 170, 0.16);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
-  box-shadow: 0 22px 44px -38px rgba(15, 23, 42, 0.52);
+  background: var(--surface-raised);
+  box-shadow: 0 16px 34px -30px rgba(15, 23, 42, 0.16);
 }
 
 .mozhi-auth-mock-bar {
@@ -2335,7 +2342,7 @@ img {
   padding: 14px;
   border: 1px solid rgba(161, 161, 170, 0.14);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  background: var(--surface-subtle);
 }
 
 .mozhi-auth-mock-avatar {
