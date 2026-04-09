@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zy.mozhi.infrastructure.dao.DraftDao">
+
+    <resultMap id="DraftResultMap" type="cn.zy.mozhi.infrastructure.dao.po.DraftPO">
+        <id column="id" property="id"/>
+        <result column="author_id" property="authorId"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.zy.mozhi.infrastructure.dao.po.DraftPO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `draft` (author_id, title, content, status, created_at, updated_at)
+        VALUES (#{authorId}, #{title}, #{content}, #{status}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <update id="update" parameterType="cn.zy.mozhi.infrastructure.dao.po.DraftPO">
+        UPDATE `draft`
+        SET title = #{title},
+            content = #{content},
+            status = #{status},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM `draft`
+        WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="DraftResultMap">
+        SELECT id, author_id, title, content, status, created_at, updated_at
+        FROM `draft`
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByAuthorId" resultMap="DraftResultMap">
+        SELECT id, author_id, title, content, status, created_at, updated_at
+        FROM `draft`
+        WHERE author_id = #{authorId}
+        ORDER BY updated_at DESC, id DESC
+    </select>
+</mapper>

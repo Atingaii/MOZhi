@@ -8,13 +8,20 @@ import cn.zy.mozhi.domain.auth.adapter.port.IAuthRefreshTokenStorePort;
 import cn.zy.mozhi.domain.auth.adapter.port.IAuthTokenPort;
 import cn.zy.mozhi.domain.auth.service.AuthDomainService;
 import cn.zy.mozhi.domain.auth.service.AuthSecurityPolicyService;
+import cn.zy.mozhi.domain.content.adapter.repository.IDraftRepository;
+import cn.zy.mozhi.domain.content.service.DraftDomainService;
 import cn.zy.mozhi.domain.storage.adapter.port.IStoragePresignPort;
 import cn.zy.mozhi.domain.storage.service.StorageDomainService;
 import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordBlocklistPort;
 import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordEncoderPort;
 import cn.zy.mozhi.domain.user.adapter.repository.IUserRepository;
 import cn.zy.mozhi.domain.user.service.UserDomainService;
+import cn.zy.mozhi.infrastructure.adapter.repository.DraftRepositoryImpl;
+import cn.zy.mozhi.infrastructure.dao.DraftDao;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.mapper.MapperFactoryBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -89,5 +96,25 @@ public class DomainConfiguration {
     @ConditionalOnBean(IStoragePresignPort.class)
     public StorageDomainService storageDomainService(IStoragePresignPort storagePresignPort) {
         return new StorageDomainService(storagePresignPort);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
+    public MapperFactoryBean<DraftDao> draftDao(SqlSessionFactory sqlSessionFactory) {
+        MapperFactoryBean<DraftDao> mapperFactoryBean = new MapperFactoryBean<>(DraftDao.class);
+        mapperFactoryBean.setSqlSessionFactory(sqlSessionFactory);
+        return mapperFactoryBean;
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
+    public IDraftRepository draftRepository(DraftDao draftDao) {
+        return new DraftRepositoryImpl(draftDao);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
+    public DraftDomainService draftDomainService(IDraftRepository draftRepository) {
+        return new DraftDomainService(draftRepository);
     }
 }
