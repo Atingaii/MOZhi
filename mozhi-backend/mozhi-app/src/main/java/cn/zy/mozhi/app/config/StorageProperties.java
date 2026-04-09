@@ -129,7 +129,7 @@ public class StorageProperties {
     }
 
     public static class Security {
-        private String uploadTicketSecret = "mozhi-storage-dev-secret";
+        private String uploadTicketSecret = "mozhi-storage-dev-secret-key-2026";
         private String uploadTicketIssuer = "mozhi-storage";
 
         public String getUploadTicketSecret() {

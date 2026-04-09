@@ -50,7 +50,7 @@ mozhi:
       - http://localhost:5173
   storage:
     security:
-      upload-ticket-secret: ${MOZHI_STORAGE_UPLOAD_TICKET_SECRET:mozhi-storage-dev-secret}
+      upload-ticket-secret: ${MOZHI_STORAGE_UPLOAD_TICKET_SECRET:mozhi-storage-dev-secret-key-2026}
       upload-ticket-issuer: ${MOZHI_STORAGE_UPLOAD_TICKET_ISSUER:mozhi-storage}
     policy:
       draft-media-max-bytes: ${MOZHI_STORAGE_DRAFT_MEDIA_MAX_BYTES:10485760}
