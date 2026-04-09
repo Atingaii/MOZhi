@@ -1000,3 +1000,312 @@ Redis 更适合做什么？
 - 登录注册计数器：[RedisAuthAttemptGuardPortImpl.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/adapter/port/RedisAuthAttemptGuardPortImpl.java)
 - 认证主链路编排：[AuthDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/auth/service/AuthDomainService.java)
 - 认证风控策略：[AuthSecurityPolicyService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/auth/service/AuthSecurityPolicyService.java)
+
+---
+
+## 四、面向真实内容平台的草稿写模型治理
+
+### 一句话亮点
+
+主导将 `Phase 2 / Step 2.1` 的草稿能力从普通 CRUD 升级为面向真实内容平台的写模型，围绕 `生命周期状态机 + 乐观锁并发控制 + 资源隔离 + 数据库约束 + 分页契约` 建立一体化治理机制，使草稿在多人多端、审核前后和异常数据场景下都具备可控的写入边界。
+
+---
+
+### 高阶简历写法
+
+- 设计并落地内容域草稿写模型，将草稿生命周期抽象为 `DRAFT / UPLOADING / PENDING_REVIEW / PUBLISHED / REJECTED / ARCHIVED` 状态机，拆分正文更新与状态流转入口，并对审核中、已发布、已归档草稿实施写入冻结，避免客户端绕过流程直接修改内容。
+- 为草稿聚合引入基于 `version + expectedVersion` 的乐观锁机制，通过 MyBatis 条件更新、标准化 `409 conflict` 错误码和版本化响应模型，解决多端编辑、状态竞态和覆盖写问题，同时配套分页筛选契约、资源防探测访问控制和数据库检查约束，形成接近真实内容平台的内容写侧治理能力。
+
+---
+
+### 情境
+
+在进入 `Phase 2 / Step 2.1` 之后，草稿域如果只停留在“有一张表、能创建、能修改、能删除”，很快就会暴露出一系列真实环境问题：
+
+1. 审核中的草稿如果还能继续改正文，审核结果就不再可信。
+2. 已发布内容如果还能物理删除或被回写，后续发布链路会变得不可追踪。
+3. 多端同时编辑草稿时，后一次提交可能无声覆盖前一次结果。
+4. 非本人访问如果返回 `403` 或不同错误信息，会泄露资源是否存在。
+5. 如果列表接口直接返回用户全部草稿，随着数据量增长会很快失去可用性。
+6. 如果状态只靠应用层约束，一旦脚本写错或人工修库写入脏状态，系统会在运行时出现不可控异常。
+
+所以这一步不能只做成“草稿 CRUD”，而要把草稿当成一个真实写模型来治理。
+
+---
+
+### 任务
+
+在不提前引入发布页、评论区、AI 摘要等后续步骤能力的前提下，先把草稿侧的写入边界做扎实，满足以下目标：
+
+1. 草稿要有明确且可验证的生命周期状态机。
+2. 正文编辑和状态流转要分离，客户端不能在一次请求里随意改状态。
+3. 并发修改必须可检测、可拒绝，而不是静默覆盖。
+4. 草稿永远绑定当前登录用户，非本人访问不暴露资源存在性。
+5. 列表接口至少要具备分页与状态筛选能力，不能返回全量数组。
+6. 状态合法性既要有应用层规则，也要有数据库层兜底。
+7. 整套实现必须保持当前 DDD 六模块结构，便于后续继续扩展 `note / media_ref / publish` 链路。
+
+---
+
+### 最终实现
+
+### 1. 生命周期状态机与写入边界
+
+草稿生命周期被明确建模为：
+
+- `DRAFT`
+- `UPLOADING`
+- `PENDING_REVIEW`
+- `PUBLISHED`
+- `REJECTED`
+- `ARCHIVED`
+
+核心实现见 [DraftEntity.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/entity/DraftEntity.java)。
+
+我没有把草稿做成“所有字段都能随便改”的贫血实体，而是在实体内部约束两类行为：
+
+1. `withContent(...)`
+   只负责正文更新
+
+2. `transitionTo(...)`
+   只负责状态流转
+
+并且在正文更新前显式执行 `assertEditableForContentUpdate()`，对以下状态直接冻结正文写入：
+
+- `PENDING_REVIEW`
+- `PUBLISHED`
+- `ARCHIVED`
+
+这样设计的原因是：
+
+1. 审核中草稿如果还能继续改，会让审核语义失效。
+2. 已发布内容继续通过草稿入口改正文，会破坏“草稿 -> 发布物”之间的边界。
+3. 已归档内容本质上是冻结资源，不应该再被作为活跃写模型使用。
+
+这比“把状态写在数据库里，Controller 想怎么调就怎么调”更接近真实内容平台的治理方式。
+
+---
+
+### 2. 基于版本号的乐观锁并发控制
+
+在真实场景下，草稿往往不是单端单次写入：
+
+1. 用户可能同时开着多个浏览器标签页。
+2. 同一草稿可能在编辑后立刻进入审核流转。
+3. 写请求之间可能存在网络重试和乱序到达。
+
+所以这次没有停留在“先查再改”的朴素实现，而是把草稿写模型升级成显式的版本化聚合。
+
+实现方式如下：
+
+1. 在 [V4__harden_draft_write_model.sql](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/db/migration/platform/V4__harden_draft_write_model.sql) 中为 `draft` 表增加 `version` 列。
+2. 在 [DraftEntity.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/entity/DraftEntity.java) 中让每次正文更新和状态流转都自增版本号。
+3. 在 [DraftUpdateRequestDTO.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-api/src/main/java/cn/zy/mozhi/api/dto/DraftUpdateRequestDTO.java) 与 [DraftStatusTransitionRequestDTO.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-api/src/main/java/cn/zy/mozhi/api/dto/DraftStatusTransitionRequestDTO.java) 中显式要求客户端提交 `expectedVersion`。
+4. 在 [DraftDao.xml](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/mybatis/mapper/DraftDao.xml) 里将更新和删除都改成条件写：
+
+- `WHERE id = #{id} AND version = #{expectedVersion}`
+
+5. 当条件更新命中 0 行时，由 [DraftDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/service/DraftDomainService.java) 抛出 `A0409 / conflict`。
+
+对应错误语义见 [ResponseCode.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-types/src/main/java/cn/zy/mozhi/types/enums/ResponseCode.java) 和 [GlobalExceptionHandler.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-trigger/src/main/java/cn/zy/mozhi/trigger/http/GlobalExceptionHandler.java)。
+
+这样设计的原因是：
+
+1. 多端并发编辑不是异常，而是默认会出现的正常场景。
+2. 静默覆盖是内容系统里最危险的一类写入错误，因为它很难被用户感知。
+3. 用版本号做乐观锁，比引入悲观锁或数据库事务锁更适合当前接口型内容写入场景。
+
+这条设计其实体现的是一个更高阶的点：
+
+`草稿更新不是“最后一次写入获胜”，而是“只有基于最新版本的写入才被接受”。`
+
+---
+
+### 3. 资源隔离与防探测访问控制
+
+草稿是用户私有资源，因此权限设计不是简单的“登录即可访问”。
+
+核心实现见 [DraftDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/service/DraftDomainService.java) 和 [DraftController.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-trigger/src/main/java/cn/zy/mozhi/trigger/http/DraftController.java)。
+
+这一步的关键控制包括：
+
+1. 草稿归属永远以当前登录用户为准，不接受客户端传 `authorId`。
+2. 查询、更新、删除、状态流转全部先按“当前用户拥有该草稿”做校验。
+3. 非本人访问统一返回 `404`，而不是 `403`。
+4. 已发布草稿禁止物理删除，只允许走归档或后续发布治理流程。
+
+为什么非本人访问返回 `404` 而不是 `403`？
+
+因为在草稿这种私有资源场景下，`403` 会向攻击者泄露“这个资源确实存在，只是你没权限”，而 `404` 更符合防探测原则。
+
+为什么已发布草稿不能物理删除？
+
+因为一旦后续 `note`、审核结果、媒体引用和审计事件都围绕它建立关系，物理删除会破坏整条内容链路。当前阶段先禁止这类删除，是为后续发布链路保留结构稳定性。
+
+---
+
+### 4. 数据库约束与应用层规则双重兜底
+
+这一步没有只依赖应用层 `if/else` 来约束状态。
+
+应用层负责什么：
+
+1. 在 [DraftEntity.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/entity/DraftEntity.java) 中控制状态迁移白名单。
+2. 在 [DraftDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/service/DraftDomainService.java) 中控制资源归属、删除边界和冲突语义。
+
+数据库层负责什么：
+
+1. 在 [V4__harden_draft_write_model.sql](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/db/migration/platform/V4__harden_draft_write_model.sql) 中为 `draft.status` 添加检查约束，防止出现脱离枚举体系的脏状态。
+2. 为 `author_id + status + updated_at` 增加复合索引，支撑分页筛选场景。
+
+仓储层还额外做了一层防腐：
+
+- [DraftRepositoryImpl.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/adapter/repository/DraftRepositoryImpl.java) 不再对持久化状态盲目 `valueOf`，而是将坏状态提升为清晰的系统错误。
+
+这样设计的原因是：
+
+1. 真实系统里的坏数据来源不只有应用代码，还可能有手工修库、迁移脚本、调试脚本、历史版本残留。
+2. 只靠应用层约束，不能阻止数据库被写进非法状态。
+3. 只靠数据库约束，又无法表达复杂的业务流转语义。
+
+所以这里采用的是：
+
+`应用层负责业务规则，数据库层负责数据边界。`
+
+这是一种更偏生产级的兜底思路。
+
+---
+
+### 5. 面向真实规模的分页与筛选契约
+
+草稿列表接口没有继续沿用“返回一个数组”的 demo 风格，而是直接收敛成可扩展的分页合同。
+
+实现见：
+
+- [DraftListQuery.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/valobj/DraftListQuery.java)
+- [DraftPageResult.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/valobj/DraftPageResult.java)
+- [DraftListPageDTO.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-api/src/main/java/cn/zy/mozhi/api/dto/DraftListPageDTO.java)
+- [DraftDao.xml](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/mybatis/mapper/DraftDao.xml)
+
+当前支持：
+
+1. `page`
+2. `pageSize`
+3. `status`
+
+响应统一为：
+
+- `page`
+- `pageSize`
+- `total`
+- `items`
+
+排序规则是：
+
+- `updated_at DESC`
+- `id DESC`
+
+为什么这一步就要补分页？
+
+因为内容平台的草稿箱天然是一个会增长的集合，如果一开始就把接口做成“全量返回数组”，后面再升级分页，前后端契约会被迫重改一次。现在直接做成分页模型，后续再扩展关键词筛选、游标分页、更新时间范围过滤都会更自然。
+
+---
+
+### 6. DDD 切片落地与后续可演进性
+
+这一步还有一个值得写进简历的点，不是功能本身，而是落地方式。
+
+整个草稿域实现保持了当前项目的六模块结构：
+
+1. `trigger`
+   HTTP 入口和参数映射，见 [DraftController.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-trigger/src/main/java/cn/zy/mozhi/trigger/http/DraftController.java)
+
+2. `domain`
+   草稿实体、分页查询值对象、仓储接口和领域服务，见 [DraftEntity.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/entity/DraftEntity.java)、[IDraftRepository.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/adapter/repository/IDraftRepository.java)、[DraftDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/service/DraftDomainService.java)
+
+3. `infrastructure`
+   DAO、PO、MyBatis XML 和仓储实现，见 [DraftDao.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/dao/DraftDao.java)、[DraftPO.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/dao/po/DraftPO.java)、[DraftRepositoryImpl.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/adapter/repository/DraftRepositoryImpl.java)
+
+4. `app`
+   Flyway 迁移、MyBatis 配置和测试装配，见 [V4__harden_draft_write_model.sql](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/db/migration/platform/V4__harden_draft_write_model.sql)、[MybatisConfiguration.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/java/cn/zy/mozhi/app/config/MybatisConfiguration.java)
+
+我还顺手统一了 mapper 装配风格，把 `DraftDao` 装配移回 MyBatis 配置层，而不是继续散落在领域装配配置里。
+
+这样做的原因是：
+
+1. 当前只是 `Step 2.1`，后面还会继续引入 `note / media_ref / publish`。
+2. 如果现在切片结构就开始散，后面内容域会很快变成一团。
+3. 先把草稿当成一个标准化子域切片落地，后续 `Step 2.2+` 才容易继续往上叠。
+
+---
+
+### 当前设计的收益与边界
+
+#### 收益
+
+1. 草稿不再是贫血 CRUD，而是具备明确生命周期和写入边界的聚合。
+2. 并发覆盖和状态竞态被版本化写模型显式收口。
+3. 私有资源访问采用 `404` 防探测语义，更接近真实安全策略。
+4. 数据库约束、仓储防腐和领域规则形成了多层兜底。
+5. 列表接口从一开始就是可扩展分页合同，避免后续大改契约。
+6. 整体实现仍保持 DDD 切片清晰，为 `Step 2.2+` 演进预留了稳定边界。
+
+#### 当前边界
+
+1. 当前列表能力只有分页和状态筛选，还没有关键词搜索、游标分页和复杂排序。
+2. 删除仍然是“未发布草稿可删、已发布不可删”，还没有回收站和软删除恢复。
+3. 草稿元数据目前只覆盖标题、正文、状态和版本，还没有摘要、标签、字数、封面等增强字段。
+4. `note` 和 `media_ref` 表已经建立，但这一步还没有正式启用它们的发布与媒体引用语义。
+
+---
+
+### 面试表达建议
+
+### 最推荐的讲法
+
+“我在这个项目里做草稿能力时，没有把它当成普通 CRUD，而是把它当成真实内容平台的写模型来设计。核心是四件事：第一，用状态机把草稿生命周期和可编辑边界讲清楚；第二，用版本号乐观锁解决多端编辑和状态竞态；第三，私有资源统一按当前用户隔离，非本人访问返回 404 做防探测；第四，在数据库层补状态约束和索引，不把所有正确性都压给应用代码。这样草稿域虽然还是 Step 2.1，但已经具备后续接审核、发布和媒体引用的基础。”
+
+### 高频追问
+
+#### 为什么正文更新和状态流转要拆成两个入口？
+
+答法要点：
+- 这两类行为的业务语义不同。
+- 正文更新关注内容编辑，状态流转关注生命周期推进。
+- 混在一个接口里，客户端很容易绕过流程边界。
+
+#### 为什么要用乐观锁，而不是直接最后一次写入覆盖？
+
+答法要点：
+- 内容编辑天然存在多端、多标签页和重试请求。
+- 静默覆盖会让用户丢内容，而且很难排查。
+- 乐观锁更适合 API 型内容写入，不需要引入重型锁机制。
+
+#### 为什么非本人访问返回 404，而不是 403？
+
+答法要点：
+- 草稿是私有资源，返回 403 会泄露资源存在性。
+- 404 更符合防探测设计。
+
+#### 为什么数据库层还要加状态检查约束？
+
+答法要点：
+- 坏数据来源不只有业务代码，还有脚本、人工修库和迁移错误。
+- 应用层规则负责业务语义，数据库约束负责数据边界。
+- 双层兜底比只依赖其中一层更稳。
+
+---
+
+### 证据锚点
+
+- 设计文档：[2026-04-09-phase2-step2-1-draft-hardening-design.md](/F:/new_opint/VibeCoding/MOZhi/docs/superpowers/specs/2026-04-09-phase2-step2-1-draft-hardening-design.md)
+- 实施计划：[2026-04-09-phase2-step2-1-draft-hardening.md](/F:/new_opint/VibeCoding/MOZhi/docs/superpowers/plans/2026-04-09-phase2-step2-1-draft-hardening.md)
+- 草稿实体：[DraftEntity.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/model/entity/DraftEntity.java)
+- 草稿领域服务：[DraftDomainService.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/service/DraftDomainService.java)
+- 草稿仓储接口：[IDraftRepository.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-domain/src/main/java/cn/zy/mozhi/domain/content/adapter/repository/IDraftRepository.java)
+- MyBatis 仓储实现：[DraftRepositoryImpl.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-infrastructure/src/main/java/cn/zy/mozhi/infrastructure/adapter/repository/DraftRepositoryImpl.java)
+- 草稿 HTTP 入口：[DraftController.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-trigger/src/main/java/cn/zy/mozhi/trigger/http/DraftController.java)
+- 持久化模型：[DraftDao.xml](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/mybatis/mapper/DraftDao.xml)
+- 迁移脚本：[V4__harden_draft_write_model.sql](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/main/resources/db/migration/platform/V4__harden_draft_write_model.sql)
+- 聚焦测试：[DraftEntityTest.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/test/java/cn/zy/mozhi/app/DraftEntityTest.java)
+- HTTP 集成测试：[DraftHttpIntegrationTest.java](/F:/new_opint/VibeCoding/MOZhi/mozhi-backend/mozhi-app/src/test/java/cn/zy/mozhi/app/DraftHttpIntegrationTest.java)
