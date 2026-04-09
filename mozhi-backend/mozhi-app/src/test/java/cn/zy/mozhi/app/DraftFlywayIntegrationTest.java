@@ -53,10 +53,25 @@ class DraftFlywayIntegrationTest {
                 "select count(*) from information_schema.columns where table_name = 'draft' and column_name = 'version'",
                 Integer.class
         );
+        Integer storageProviderColumnCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.columns where table_name = 'media_ref' and column_name = 'storage_provider'",
+                Integer.class
+        );
+        Integer uploadStatusColumnCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.columns where table_name = 'media_ref' and column_name = 'upload_status'",
+                Integer.class
+        );
+        Integer sizeBytesColumnCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.columns where table_name = 'media_ref' and column_name = 'size_bytes'",
+                Integer.class
+        );
 
         assertThat(draftCount).isEqualTo(1);
         assertThat(noteCount).isEqualTo(1);
         assertThat(mediaRefCount).isEqualTo(1);
         assertThat(draftVersionColumnCount).isEqualTo(1);
+        assertThat(storageProviderColumnCount).isEqualTo(1);
+        assertThat(uploadStatusColumnCount).isEqualTo(1);
+        assertThat(sizeBytesColumnCount).isEqualTo(1);
     }
 }
