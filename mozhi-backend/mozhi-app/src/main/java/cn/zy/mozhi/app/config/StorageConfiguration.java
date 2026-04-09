@@ -14,8 +14,8 @@ public class StorageConfiguration {
     @ConditionalOnProperty(prefix = "mozhi.storage.minio", name = "enabled", havingValue = "true")
     public MinioClient minioClient(StorageProperties storageProperties) {
         return MinioClient.builder()
-                .endpoint(storageProperties.getEndpoint())
-                .credentials(storageProperties.getAccessKey(), storageProperties.getSecretKey())
+                .endpoint(storageProperties.getMinio().getEndpoint())
+                .credentials(storageProperties.getMinio().getAccessKey(), storageProperties.getMinio().getSecretKey())
                 .build();
     }
 }

@@ -11,6 +11,7 @@ import cn.zy.mozhi.domain.auth.service.AuthSecurityPolicyService;
 import cn.zy.mozhi.domain.content.adapter.repository.IDraftRepository;
 import cn.zy.mozhi.domain.content.service.DraftDomainService;
 import cn.zy.mozhi.domain.storage.adapter.port.IStoragePresignPort;
+import cn.zy.mozhi.domain.storage.adapter.port.IStorageUploadTicketPort;
 import cn.zy.mozhi.domain.storage.service.StorageDomainService;
 import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordBlocklistPort;
 import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordEncoderPort;
@@ -91,9 +92,15 @@ public class DomainConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean(IStoragePresignPort.class)
-    public StorageDomainService storageDomainService(IStoragePresignPort storagePresignPort) {
-        return new StorageDomainService(storagePresignPort);
+    @ConditionalOnBean({IStoragePresignPort.class, IStorageUploadTicketPort.class})
+    public StorageDomainService storageDomainService(IStoragePresignPort storagePresignPort,
+                                                     IStorageUploadTicketPort storageUploadTicketPort,
+                                                     StorageProperties storageProperties) {
+        return new StorageDomainService(
+                storagePresignPort,
+                storageUploadTicketPort,
+                storageProperties.getPolicy().getDraftMediaMaxBytes()
+        );
     }
 
     @Bean

@@ -49,6 +49,14 @@ mozhi:
       - http://127.0.0.1:5173
       - http://localhost:5173
   storage:
+    security:
+      upload-ticket-secret: ${MOZHI_STORAGE_UPLOAD_TICKET_SECRET:mozhi-storage-dev-secret}
+      upload-ticket-issuer: ${MOZHI_STORAGE_UPLOAD_TICKET_ISSUER:mozhi-storage}
+    policy:
+      draft-media-max-bytes: ${MOZHI_STORAGE_DRAFT_MEDIA_MAX_BYTES:10485760}
+    local:
+      root: ${MOZHI_STORAGE_LOCAL_ROOT:./.tmp/storage-mock}
+      public-endpoint: ${MOZHI_STORAGE_LOCAL_PUBLIC_ENDPOINT:http://127.0.0.1:8090}
     minio:
       enabled: ${MOZHI_STORAGE_MINIO_ENABLED:false}
       endpoint: ${MOZHI_STORAGE_MINIO_ENDPOINT:http://127.0.0.1:19000}

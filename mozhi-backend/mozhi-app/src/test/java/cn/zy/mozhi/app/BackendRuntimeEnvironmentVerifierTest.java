@@ -27,6 +27,7 @@ class BackendRuntimeEnvironmentVerifierTest {
         String frontendDockerfileDev = Files.readString(repoRoot.resolve("mozhi-web").resolve("Dockerfile.dev"));
         String rootReadme = Files.readString(repoRoot.resolve("README.md"));
         String devOpsReadme = Files.readString(repoRoot.resolve("docs").resolve("dev-ops").resolve("README.md"));
+        String applicationYaml = Files.readString(backendRoot.resolve("mozhi-app").resolve("src").resolve("main").resolve("resources").resolve("application.yml"));
         String devProfile = Files.readString(backendRoot.resolve("mozhi-app").resolve("src").resolve("main").resolve("resources").resolve("application-dev.yml"));
         String testProfile = Files.readString(backendRoot.resolve("mozhi-app").resolve("src").resolve("main").resolve("resources").resolve("application-test.yml"));
         String prodProfile = Files.readString(backendRoot.resolve("mozhi-app").resolve("src").resolve("main").resolve("resources").resolve("application-prod.yml"));
@@ -76,6 +77,10 @@ class BackendRuntimeEnvironmentVerifierTest {
                         "dev profile must support env-driven middleware endpoints"),
                 () -> assertTrue(devProfile.contains("allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:true}"),
                         "dev profile must allow local challenge bypass when Turnstile is unconfigured"),
+                () -> assertTrue(applicationYaml.contains("upload-ticket-secret: ${MOZHI_STORAGE_UPLOAD_TICKET_SECRET:"),
+                        "application.yml must expose the upload ticket secret"),
+                () -> assertTrue(applicationYaml.contains("draft-media-max-bytes: ${MOZHI_STORAGE_DRAFT_MEDIA_MAX_BYTES:"),
+                        "application.yml must expose the draft media max size policy"),
                 () -> assertTrue(testProfile.contains("${MYSQL_TEST_DATABASE:mozhi_test}"),
                         "test profile must support a separate test database"),
                 () -> assertTrue(prodProfile.contains("allow-bypass-when-unconfigured: ${MOZHI_AUTH_CHALLENGE_ALLOW_BYPASS_WHEN_UNCONFIGURED:false}"),

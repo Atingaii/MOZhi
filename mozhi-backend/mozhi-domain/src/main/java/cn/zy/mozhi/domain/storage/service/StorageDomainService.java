@@ -34,15 +34,23 @@ public class StorageDomainService {
 
     private final IStoragePresignPort storagePresignPort;
     private final IStorageUploadTicketPort storageUploadTicketPort;
+    private final long draftMediaMaxBytes;
 
     public StorageDomainService(IStoragePresignPort storagePresignPort) {
-        this(storagePresignPort, new NoopStorageUploadTicketPort());
+        this(storagePresignPort, new NoopStorageUploadTicketPort(), 10 * 1024 * 1024L);
     }
 
     public StorageDomainService(IStoragePresignPort storagePresignPort,
                                 IStorageUploadTicketPort storageUploadTicketPort) {
+        this(storagePresignPort, storageUploadTicketPort, 10 * 1024 * 1024L);
+    }
+
+    public StorageDomainService(IStoragePresignPort storagePresignPort,
+                                IStorageUploadTicketPort storageUploadTicketPort,
+                                long draftMediaMaxBytes) {
         this.storagePresignPort = storagePresignPort;
         this.storageUploadTicketPort = storageUploadTicketPort;
+        this.draftMediaMaxBytes = draftMediaMaxBytes;
     }
 
     public StoragePresignedUpload presignAvatarUpload(Long userId, String fileName, String contentType) {
@@ -75,6 +83,9 @@ public class StorageDomainService {
             throw new BaseException(ResponseCode.BAD_REQUEST, "draft media content type is not supported");
         }
         Long normalizedDeclaredSizeBytes = requirePositive(declaredSizeBytes, "declaredSizeBytes must be positive");
+        if (normalizedDeclaredSizeBytes > draftMediaMaxBytes) {
+            throw new BaseException(ResponseCode.BAD_REQUEST, "draft media size exceeds policy");
+        }
         String extension = resolveExtension(normalizedFileName, normalizedContentType);
         String objectKey = buildDraftObjectKey(normalizedUserId, normalizedDraftId, extension);
         StoragePresignedUpload upload = storagePresignPort.presignUpload(objectKey, normalizedContentType, DRAFT_MEDIA_UPLOAD_TTL);
