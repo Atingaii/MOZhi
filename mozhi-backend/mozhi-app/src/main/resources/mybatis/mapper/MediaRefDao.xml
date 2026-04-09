@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zy.mozhi.infrastructure.dao.MediaRefDao">
+
+    <resultMap id="MediaRefResultMap" type="cn.zy.mozhi.infrastructure.dao.po.MediaRefPO">
+        <id column="id" property="id"/>
+        <result column="owner_id" property="ownerId"/>
+        <result column="draft_id" property="draftId"/>
+        <result column="note_id" property="noteId"/>
+        <result column="storage_provider" property="storageProvider"/>
+        <result column="bucket_name" property="bucketName"/>
+        <result column="object_key" property="objectKey"/>
+        <result column="public_url" property="publicUrl"/>
+        <result column="file_name" property="fileName"/>
+        <result column="media_type" property="mediaType"/>
+        <result column="content_type" property="contentType"/>
+        <result column="size_bytes" property="sizeBytes"/>
+        <result column="etag" property="etag"/>
+        <result column="upload_status" property="uploadStatus"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="bound_at" property="boundAt"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="cn.zy.mozhi.infrastructure.dao.po.MediaRefPO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `media_ref` (
+            owner_id,
+            draft_id,
+            note_id,
+            storage_provider,
+            bucket_name,
+            object_key,
+            public_url,
+            file_name,
+            media_type,
+            content_type,
+            size_bytes,
+            etag,
+            upload_status,
+            sort_order,
+            bound_at,
+            created_at,
+            updated_at
+        ) VALUES (
+            #{ownerId},
+            #{draftId},
+            #{noteId},
+            #{storageProvider},
+            #{bucketName},
+            #{objectKey},
+            #{publicUrl},
+            #{fileName},
+            #{mediaType},
+            #{contentType},
+            #{sizeBytes},
+            #{etag},
+            #{uploadStatus},
+            #{sortOrder},
+            #{boundAt},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectByStorageIdentity" resultMap="MediaRefResultMap">
+        SELECT id, owner_id, draft_id, note_id, storage_provider, bucket_name, object_key, public_url,
+               file_name, media_type, content_type, size_bytes, etag, upload_status, sort_order,
+               bound_at, created_at, updated_at
+        FROM `media_ref`
+        WHERE storage_provider = #{storageProvider}
+          AND bucket_name = #{bucketName}
+          AND object_key = #{objectKey}
+    </select>
+
+    <select id="selectByDraftId" resultMap="MediaRefResultMap">
+        SELECT id, owner_id, draft_id, note_id, storage_provider, bucket_name, object_key, public_url,
+               file_name, media_type, content_type, size_bytes, etag, upload_status, sort_order,
+               bound_at, created_at, updated_at
+        FROM `media_ref`
+        WHERE draft_id = #{draftId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+</mapper>

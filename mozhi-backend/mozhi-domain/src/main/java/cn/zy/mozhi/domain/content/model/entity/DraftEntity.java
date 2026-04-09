@@ -133,6 +133,14 @@ public class DraftEntity {
                 || status == DraftStatusEnum.REJECTED;
     }
 
+    public void assertWritableForMediaBinding() {
+        if (status == DraftStatusEnum.PENDING_REVIEW
+                || status == DraftStatusEnum.PUBLISHED
+                || status == DraftStatusEnum.ARCHIVED) {
+            throw new BaseException(ResponseCode.BAD_REQUEST, "draft media is read only in current status");
+        }
+    }
+
     private static String normalizeTitle(String title) {
         String normalized = requireText(title, "title must not be blank");
         if (normalized.length() > MAX_TITLE_LENGTH) {

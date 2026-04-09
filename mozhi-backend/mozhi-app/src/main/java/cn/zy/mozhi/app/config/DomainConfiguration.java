@@ -9,7 +9,9 @@ import cn.zy.mozhi.domain.auth.adapter.port.IAuthTokenPort;
 import cn.zy.mozhi.domain.auth.service.AuthDomainService;
 import cn.zy.mozhi.domain.auth.service.AuthSecurityPolicyService;
 import cn.zy.mozhi.domain.content.adapter.repository.IDraftRepository;
+import cn.zy.mozhi.domain.content.adapter.repository.IMediaRefRepository;
 import cn.zy.mozhi.domain.content.service.DraftDomainService;
+import cn.zy.mozhi.domain.storage.adapter.port.IStorageObjectInspectPort;
 import cn.zy.mozhi.domain.storage.adapter.port.IStoragePresignPort;
 import cn.zy.mozhi.domain.storage.adapter.port.IStorageUploadTicketPort;
 import cn.zy.mozhi.domain.storage.service.StorageDomainService;
@@ -18,7 +20,9 @@ import cn.zy.mozhi.domain.user.adapter.port.IUserPasswordEncoderPort;
 import cn.zy.mozhi.domain.user.adapter.repository.IUserRepository;
 import cn.zy.mozhi.domain.user.service.UserDomainService;
 import cn.zy.mozhi.infrastructure.adapter.repository.DraftRepositoryImpl;
+import cn.zy.mozhi.infrastructure.adapter.repository.MediaRefRepositoryImpl;
 import cn.zy.mozhi.infrastructure.dao.DraftDao;
+import cn.zy.mozhi.infrastructure.dao.MediaRefDao;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -111,7 +115,23 @@ public class DomainConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
-    public DraftDomainService draftDomainService(IDraftRepository draftRepository) {
-        return new DraftDomainService(draftRepository);
+    public IMediaRefRepository mediaRefRepository(MediaRefDao mediaRefDao) {
+        return new MediaRefRepositoryImpl(mediaRefDao);
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
+    public DraftDomainService draftDomainService(IDraftRepository draftRepository,
+                                                 IMediaRefRepository mediaRefRepository,
+                                                 IStorageUploadTicketPort storageUploadTicketPort,
+                                                 IStorageObjectInspectPort storageObjectInspectPort,
+                                                 IStoragePresignPort storagePresignPort) {
+        return new DraftDomainService(
+                draftRepository,
+                mediaRefRepository,
+                storageUploadTicketPort,
+                storageObjectInspectPort,
+                storagePresignPort
+        );
     }
 }

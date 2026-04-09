@@ -3,6 +3,9 @@ package cn.zy.mozhi.app;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.zy.mozhi.domain.auth.adapter.port.IAuthAttemptGuardPort;
+import cn.zy.mozhi.domain.storage.adapter.port.IStorageObjectPort;
+import cn.zy.mozhi.domain.storage.adapter.port.IStorageUploadTicketPort;
+import cn.zy.mozhi.domain.storage.model.valobj.StorageUploadTicketClaims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +56,12 @@ class DraftHttpIntegrationTest {
 
     @Autowired
     private IAuthAttemptGuardPort authAttemptGuardPort;
+
+    @Autowired
+    private IStorageObjectPort storageObjectPort;
+
+    @Autowired
+    private IStorageUploadTicketPort storageUploadTicketPort;
 
     @BeforeEach
     void cleanUp() {
@@ -315,6 +324,55 @@ class DraftHttpIntegrationTest {
                 .andExpect(jsonPath("$.message").value("targetStatus must not be blank"));
     }
 
+    @Test
+    void should_confirm_draft_media_and_keep_confirm_idempotent() throws Exception {
+        String username = "mediaowner";
+        String accessToken = registerAndLogin(username, "mediaowner@mozhi.dev", "Secret123!", "MediaOwner");
+        long ownerId = queryUserId(username);
+        DraftSnapshot draftSnapshot = createDraft(accessToken, "Draft with media", "Body");
+
+        MediaUploadFixture uploadFixture = prepareStoredDraftMedia(ownerId, draftSnapshot.draftId(), "cover.png", "image/png", "IMAGE", 0);
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/media/confirm", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmDraftMediaRequest(uploadFixture.objectKey(), uploadFixture.uploadTicket(), 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].objectKey").value(uploadFixture.objectKey()))
+                .andExpect(jsonPath("$.data.items[0].uploadStatus").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.items[0].mediaType").value("IMAGE"));
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/media/confirm", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmDraftMediaRequest(uploadFixture.objectKey(), uploadFixture.uploadTicket(), 0)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1));
+    }
+
+    @Test
+    void should_reject_confirming_media_for_frozen_draft() throws Exception {
+        String username = "frozenmedia";
+        String accessToken = registerAndLogin(username, "frozenmedia@mozhi.dev", "Secret123!", "FrozenMedia");
+        long ownerId = queryUserId(username);
+        DraftSnapshot draftSnapshot = createDraft(accessToken, "Frozen media draft", "Body");
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", draftSnapshot.version())))
+                .andExpect(status().isOk());
+
+        MediaUploadFixture uploadFixture = prepareStoredDraftMedia(ownerId, draftSnapshot.draftId(), "cover.png", "image/png", "IMAGE", 0);
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/media/confirm", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(confirmDraftMediaRequest(uploadFixture.objectKey(), uploadFixture.uploadTicket(), 0)))
+                .andExpect(status().isBadRequest());
+    }
+
     private void deleteIfExists(String tableName) {
         Integer tableCount = jdbcTemplate.queryForObject(
                 "select count(*) from information_schema.tables where table_name = ?",
@@ -360,6 +418,36 @@ class DraftHttpIntegrationTest {
         return new DraftSnapshot(data.path("draftId").asLong(), data.path("version").asLong());
     }
 
+    private long queryUserId(String username) {
+        return jdbcTemplate.queryForObject("SELECT id FROM `user` WHERE username = ?", Long.class, username);
+    }
+
+    private MediaUploadFixture prepareStoredDraftMedia(long ownerId,
+                                                       long draftId,
+                                                       String fileName,
+                                                       String contentType,
+                                                       String mediaType,
+                                                       int sortOrder) {
+        String objectKey = "drafts/%d/%d/20260409/%s".formatted(ownerId, draftId, fileName);
+        byte[] content = "fake-image-content".getBytes();
+        storageObjectPort.store(objectKey, contentType, content);
+        String uploadTicket = storageUploadTicketPort.issue(
+                new StorageUploadTicketClaims(
+                        ownerId,
+                        draftId,
+                        "DRAFT_MEDIA",
+                        mediaType,
+                        contentType,
+                        (long) content.length,
+                        objectKey,
+                        "LOCAL",
+                        "mozhi-assets"
+                ),
+                java.time.Duration.ofMinutes(15)
+        );
+        return new MediaUploadFixture(objectKey, uploadTicket, sortOrder);
+    }
+
     private String registerRequest(String username, String email, String password, String nickname) {
         return writeJson(new LinkedHashMap<>(Map.of(
                 "username", username,
@@ -398,6 +486,14 @@ class DraftHttpIntegrationTest {
         )));
     }
 
+    private String confirmDraftMediaRequest(String objectKey, String uploadTicket, int sortOrder) {
+        return writeJson(new LinkedHashMap<>(Map.of(
+                "objectKey", objectKey,
+                "uploadTicket", uploadTicket,
+                "sortOrder", sortOrder
+        )));
+    }
+
     private String writeJson(Object payload) {
         try {
             return objectMapper.writeValueAsString(payload);
@@ -407,5 +503,8 @@ class DraftHttpIntegrationTest {
     }
 
     private record DraftSnapshot(long draftId, long version) {
+    }
+
+    private record MediaUploadFixture(String objectKey, String uploadTicket, int sortOrder) {
     }
 }
