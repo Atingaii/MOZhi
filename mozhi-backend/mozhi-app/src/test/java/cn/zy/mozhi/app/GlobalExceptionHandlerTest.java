@@ -67,6 +67,15 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value(ResponseCode.SYSTEM_ERROR.getMessage()));
     }
 
+    @Test
+    void should_wrap_system_base_exception_as_internal_error_response() throws Exception {
+        mockMvc.perform(get("/test/system-domain"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(ResponseCode.SYSTEM_ERROR.getCode()))
+                .andExpect(jsonPath("$.message").value("draft persistence status is invalid"));
+    }
+
     @RestController
     static class FailureController {
 
@@ -83,6 +92,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/test/system")
         String systemFailure() {
             throw new IllegalStateException("boom");
+        }
+
+        @GetMapping("/test/system-domain")
+        String domainSystemFailure() {
+            throw new BaseException(ResponseCode.SYSTEM_ERROR, "draft persistence status is invalid");
         }
     }
 

@@ -11,7 +11,7 @@ public class DraftEntity {
     private static final int MAX_TITLE_LENGTH = 128;
     private static final int MAX_CONTENT_LENGTH = 20_000;
 
-    private Long id;
+    private final Long id;
     private final Long authorId;
     private final String title;
     private final String content;
@@ -83,6 +83,23 @@ public class DraftEntity {
         );
     }
 
+    public DraftEntity withId(Long id) {
+        requirePositive(id, "draftId must be positive");
+        if (this.id != null && !this.id.equals(id)) {
+            throw new BaseException(ResponseCode.SYSTEM_ERROR, "draft id is already assigned");
+        }
+        return new DraftEntity(
+                id,
+                authorId,
+                title,
+                content,
+                status,
+                version,
+                createdAt,
+                updatedAt
+        );
+    }
+
     private void assertEditableForContentUpdate() {
         if (status == DraftStatusEnum.PENDING_REVIEW
                 || status == DraftStatusEnum.PUBLISHED
@@ -108,6 +125,12 @@ public class DraftEntity {
             case PUBLISHED -> targetStatus == DraftStatusEnum.ARCHIVED;
             case ARCHIVED -> false;
         };
+    }
+
+    public boolean canDelete() {
+        return status == DraftStatusEnum.DRAFT
+                || status == DraftStatusEnum.UPLOADING
+                || status == DraftStatusEnum.REJECTED;
     }
 
     private static String normalizeTitle(String title) {
@@ -141,10 +164,6 @@ public class DraftEntity {
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Long getAuthorId() {

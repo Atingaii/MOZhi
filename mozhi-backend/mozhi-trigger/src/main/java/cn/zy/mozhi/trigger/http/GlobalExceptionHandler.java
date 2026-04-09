@@ -52,6 +52,9 @@ public class GlobalExceptionHandler {
     }
 
     private HttpStatus resolveStatus(String errorCode) {
+        if (ResponseCode.SYSTEM_ERROR.getCode().equals(errorCode)) {
+            return HttpStatus.INTERNAL_SERVER_ERROR;
+        }
         return switch (errorCode) {
             case "A0401" -> HttpStatus.UNAUTHORIZED;
             case "A0403" -> HttpStatus.FORBIDDEN;

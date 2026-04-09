@@ -21,8 +21,7 @@ public class DraftDomainService {
     public DraftEntity create(Long actorUserId, String title, String content) {
         Long normalizedActorUserId = requirePositive(actorUserId, "actorUserId must be positive");
         DraftEntity draftEntity = DraftEntity.createNew(normalizedActorUserId, title, content);
-        draftEntity.setId(draftRepository.save(draftEntity));
-        return draftEntity;
+        return draftEntity.withId(draftRepository.save(draftEntity));
     }
 
     public DraftPageResult listMine(Long actorUserId, int page, int pageSize, String status) {
@@ -53,8 +52,8 @@ public class DraftDomainService {
 
     public void deleteMine(Long actorUserId, Long draftId, Long expectedVersion) {
         DraftEntity draftEntity = getMineById(actorUserId, draftId);
-        if (draftEntity.getStatus() == DraftStatusEnum.PUBLISHED) {
-            throw new BaseException(ResponseCode.BAD_REQUEST, "published draft cannot be deleted");
+        if (!draftEntity.canDelete()) {
+            throw new BaseException(ResponseCode.BAD_REQUEST, "draft in current status cannot be deleted");
         }
         if (!draftRepository.deleteById(draftEntity.getId(), requirePositiveOrZero(expectedVersion, "expectedVersion must not be negative"))) {
             throw new BaseException(ResponseCode.CONFLICT, "draft version is stale");

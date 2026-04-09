@@ -15,6 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,7 +64,7 @@ class DraftHttpIntegrationTest {
     }
 
     @Test
-    void should_create_list_update_transition_and_delete_own_draft() throws Exception {
+    void should_create_list_update_and_delete_own_editable_draft() throws Exception {
         String accessToken = registerAndLogin("author", "author@mozhi.dev", "Secret123!", "Author");
 
         MvcResult createResult = mockMvc.perform(post("/api/content/drafts")
@@ -102,19 +105,15 @@ class DraftHttpIntegrationTest {
                 .andExpect(jsonPath("$.data.content").value("Updated body"))
                 .andExpect(jsonPath("$.data.version").value(1));
 
-        mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftId)
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 1L)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
-                .andExpect(jsonPath("$.data.version").value(2));
-
         mockMvc.perform(delete("/api/content/drafts/{draftId}", draftId)
-                        .queryParam("expectedVersion", "2")
+                        .queryParam("expectedVersion", "1")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/content/drafts/{draftId}", draftId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -180,6 +179,37 @@ class DraftHttpIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void should_reject_deleting_pending_review_and_archived_drafts() throws Exception {
+        String accessToken = registerAndLogin("lifecycle", "lifecycle@mozhi.dev", "Secret123!", "Lifecycle");
+
+        DraftSnapshot pendingReviewDraft = createDraft(accessToken, "Pending review", "Body");
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", pendingReviewDraft.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", pendingReviewDraft.version())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/content/drafts/{draftId}", pendingReviewDraft.draftId())
+                        .queryParam("expectedVersion", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("draft in current status cannot be deleted"));
+
+        DraftSnapshot archivedDraft = createDraft(accessToken, "Archived draft", "Body");
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", archivedDraft.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("ARCHIVED", archivedDraft.version())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/content/drafts/{draftId}", archivedDraft.draftId())
+                        .queryParam("expectedVersion", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("draft in current status cannot be deleted"));
     }
 
     @Test
@@ -258,6 +288,33 @@ class DraftHttpIntegrationTest {
                 .andExpect(jsonPath("$.code").value("A0401"));
     }
 
+    @Test
+    void should_reject_invalid_draft_requests_at_http_boundary() throws Exception {
+        String accessToken = registerAndLogin("validator", "validator@mozhi.dev", "Secret123!", "Validator");
+        DraftSnapshot draftSnapshot = createDraft(accessToken, "Valid draft", "Body");
+
+        mockMvc.perform(post("/api/content/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDraftRequest(" ", "Body")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("title must not be blank"));
+
+        mockMvc.perform(put("/api/content/drafts/{draftId}", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateDraftRequest("Updated", "Body", null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("expectedVersion must not be null"));
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest(" ", 0L)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("targetStatus must not be blank"));
+    }
+
     private void deleteIfExists(String tableName) {
         Integer tableCount = jdbcTemplate.queryForObject(
                 "select count(*) from information_schema.tables where table_name = ?",
@@ -304,46 +361,49 @@ class DraftHttpIntegrationTest {
     }
 
     private String registerRequest(String username, String email, String password, String nickname) {
-        return String.format(
-                "{\"username\":\"%s\",\"email\":\"%s\",\"password\":\"%s\",\"nickname\":\"%s\"}",
-                username,
-                email,
-                password,
-                nickname
-        );
+        return writeJson(new LinkedHashMap<>(Map.of(
+                "username", username,
+                "email", email,
+                "password", password,
+                "nickname", nickname
+        )));
     }
 
     private String loginRequest(String identifier, String password) {
-        return String.format(
-                "{\"identifier\":\"%s\",\"password\":\"%s\"}",
-                identifier,
-                password
-        );
+        return writeJson(new LinkedHashMap<>(Map.of(
+                "identifier", identifier,
+                "password", password
+        )));
     }
 
     private String createDraftRequest(String title, String content) {
-        return String.format(
-                "{\"title\":\"%s\",\"content\":\"%s\"}",
-                title,
-                content
-        );
+        return writeJson(new LinkedHashMap<>(Map.of(
+                "title", title,
+                "content", content
+        )));
     }
 
-    private String updateDraftRequest(String title, String content, long expectedVersion) {
-        return String.format(
-                "{\"title\":\"%s\",\"content\":\"%s\",\"expectedVersion\":%d}",
-                title,
-                content,
-                expectedVersion
-        );
+    private String updateDraftRequest(String title, String content, Long expectedVersion) {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        payload.put("title", title);
+        payload.put("content", content);
+        payload.put("expectedVersion", expectedVersion);
+        return writeJson(payload);
     }
 
     private String transitionDraftStatusRequest(String targetStatus, long expectedVersion) {
-        return String.format(
-                "{\"targetStatus\":\"%s\",\"expectedVersion\":%d}",
-                targetStatus,
-                expectedVersion
-        );
+        return writeJson(new LinkedHashMap<>(Map.of(
+                "targetStatus", targetStatus,
+                "expectedVersion", expectedVersion
+        )));
+    }
+
+    private String writeJson(Object payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception exception) {
+            throw new IllegalStateException("failed to serialize test payload", exception);
+        }
     }
 
     private record DraftSnapshot(long draftId, long version) {

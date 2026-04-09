@@ -11,6 +11,7 @@ import cn.zy.mozhi.domain.auth.model.valobj.AuthTokenClaims;
 import cn.zy.mozhi.domain.content.model.entity.DraftEntity;
 import cn.zy.mozhi.domain.content.model.valobj.DraftPageResult;
 import cn.zy.mozhi.domain.content.service.DraftDomainService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -41,7 +42,7 @@ public class DraftController {
 
     @PostMapping
     public ApiResponse<DraftDetailDTO> create(@AuthenticationPrincipal AuthTokenClaims tokenClaims,
-                                              @RequestBody DraftCreateRequestDTO requestDTO) {
+                                              @Valid @RequestBody DraftCreateRequestDTO requestDTO) {
         DraftEntity draftEntity = draftDomainService.create(
                 tokenClaims.userId(),
                 requestDTO.title(),
@@ -73,7 +74,7 @@ public class DraftController {
     @PutMapping("/{draftId}")
     public ApiResponse<DraftDetailDTO> update(@AuthenticationPrincipal AuthTokenClaims tokenClaims,
                                               @PathVariable("draftId") Long draftId,
-                                              @RequestBody DraftUpdateRequestDTO requestDTO) {
+                                              @Valid @RequestBody DraftUpdateRequestDTO requestDTO) {
         DraftEntity draftEntity = draftDomainService.updateMine(
                 tokenClaims.userId(),
                 draftId,
@@ -95,7 +96,7 @@ public class DraftController {
     @PostMapping("/{draftId}/status")
     public ApiResponse<DraftDetailDTO> transition(@AuthenticationPrincipal AuthTokenClaims tokenClaims,
                                                   @PathVariable("draftId") Long draftId,
-                                                  @RequestBody DraftStatusTransitionRequestDTO requestDTO) {
+                                                  @Valid @RequestBody DraftStatusTransitionRequestDTO requestDTO) {
         DraftEntity draftEntity = draftDomainService.transitionMineStatus(
                 tokenClaims.userId(),
                 draftId,
