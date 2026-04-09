@@ -6,6 +6,7 @@ public record DraftSummaryDTO(
         Long draftId,
         String title,
         String status,
+        Long version,
         LocalDateTime updatedAt
 ) {
 }

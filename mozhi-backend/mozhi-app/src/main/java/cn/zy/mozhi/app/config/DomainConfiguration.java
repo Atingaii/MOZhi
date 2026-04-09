@@ -18,8 +18,6 @@ import cn.zy.mozhi.domain.user.adapter.repository.IUserRepository;
 import cn.zy.mozhi.domain.user.service.UserDomainService;
 import cn.zy.mozhi.infrastructure.adapter.repository.DraftRepositoryImpl;
 import cn.zy.mozhi.infrastructure.dao.DraftDao;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.mybatis.spring.mapper.MapperFactoryBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -96,14 +94,6 @@ public class DomainConfiguration {
     @ConditionalOnBean(IStoragePresignPort.class)
     public StorageDomainService storageDomainService(IStoragePresignPort storagePresignPort) {
         return new StorageDomainService(storagePresignPort);
-    }
-
-    @Bean
-    @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
-    public MapperFactoryBean<DraftDao> draftDao(SqlSessionFactory sqlSessionFactory) {
-        MapperFactoryBean<DraftDao> mapperFactoryBean = new MapperFactoryBean<>(DraftDao.class);
-        mapperFactoryBean.setSqlSessionFactory(sqlSessionFactory);
-        return mapperFactoryBean;
     }
 
     @Bean

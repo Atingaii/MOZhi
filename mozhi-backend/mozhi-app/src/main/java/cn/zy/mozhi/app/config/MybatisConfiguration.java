@@ -1,5 +1,6 @@
 package cn.zy.mozhi.app.config;
 
+import cn.zy.mozhi.infrastructure.dao.DraftDao;
 import cn.zy.mozhi.infrastructure.dao.UserDao;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,6 +15,13 @@ public class MybatisConfiguration {
     @Bean
     public MapperFactoryBean<UserDao> userDao(SqlSessionFactory sqlSessionFactory) {
         MapperFactoryBean<UserDao> mapperFactoryBean = new MapperFactoryBean<>(UserDao.class);
+        mapperFactoryBean.setSqlSessionFactory(sqlSessionFactory);
+        return mapperFactoryBean;
+    }
+
+    @Bean
+    public MapperFactoryBean<DraftDao> draftDao(SqlSessionFactory sqlSessionFactory) {
+        MapperFactoryBean<DraftDao> mapperFactoryBean = new MapperFactoryBean<>(DraftDao.class);
         mapperFactoryBean.setSqlSessionFactory(sqlSessionFactory);
         return mapperFactoryBean;
     }

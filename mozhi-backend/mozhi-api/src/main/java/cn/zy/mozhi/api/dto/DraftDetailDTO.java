@@ -8,6 +8,7 @@ public record DraftDetailDTO(
         String title,
         String content,
         String status,
+        Long version,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

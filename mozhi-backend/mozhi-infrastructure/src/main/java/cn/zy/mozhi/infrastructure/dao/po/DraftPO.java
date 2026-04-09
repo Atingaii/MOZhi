@@ -9,6 +9,8 @@ public class DraftPO {
     private String title;
     private String content;
     private String status;
+    private Long version;
+    private Long expectedVersion;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -50,6 +52,22 @@ public class DraftPO {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    public Long getExpectedVersion() {
+        return expectedVersion;
+    }
+
+    public void setExpectedVersion(Long expectedVersion) {
+        this.expectedVersion = expectedVersion;
     }
 
     public LocalDateTime getCreatedAt() {

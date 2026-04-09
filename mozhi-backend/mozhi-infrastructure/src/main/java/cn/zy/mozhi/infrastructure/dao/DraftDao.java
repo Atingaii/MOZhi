@@ -11,9 +11,14 @@ public interface DraftDao {
 
     int update(DraftPO draftPO);
 
-    int deleteById(@Param("id") Long id);
+    int deleteById(@Param("id") Long id, @Param("expectedVersion") Long expectedVersion);
 
     DraftPO selectById(@Param("id") Long id);
 
-    List<DraftPO> selectByAuthorId(@Param("authorId") Long authorId);
+    List<DraftPO> selectPageByAuthorId(@Param("authorId") Long authorId,
+                                       @Param("status") String status,
+                                       @Param("limit") int limit,
+                                       @Param("offset") int offset);
+
+    long countByAuthorId(@Param("authorId") Long authorId, @Param("status") String status);
 }

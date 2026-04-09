@@ -71,6 +71,7 @@ class DraftHttpIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                .andExpect(jsonPath("$.data.version").value(0))
                 .andReturn();
 
         long draftId = readDraftId(createResult);
@@ -79,7 +80,11 @@ class DraftHttpIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].draftId").value(draftId));
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.pageSize").value(20))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].draftId").value(draftId))
+                .andExpect(jsonPath("$.data.items[0].version").value(0));
 
         mockMvc.perform(get("/api/content/drafts/{draftId}", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
@@ -91,19 +96,22 @@ class DraftHttpIntegrationTest {
         mockMvc.perform(put("/api/content/drafts/{draftId}", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateDraftRequest("Updated title", "Updated body")))
+                        .content(updateDraftRequest("Updated title", "Updated body", 0L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("Updated title"))
-                .andExpect(jsonPath("$.data.content").value("Updated body"));
+                .andExpect(jsonPath("$.data.content").value("Updated body"))
+                .andExpect(jsonPath("$.data.version").value(1));
 
         mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transitionDraftStatusRequest("PENDING_REVIEW")))
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 1L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"));
+                .andExpect(jsonPath("$.data.status").value("PENDING_REVIEW"))
+                .andExpect(jsonPath("$.data.version").value(2));
 
         mockMvc.perform(delete("/api/content/drafts/{draftId}", draftId)
+                        .queryParam("expectedVersion", "2")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -130,13 +138,13 @@ class DraftHttpIntegrationTest {
         mockMvc.perform(put("/api/content/drafts/{draftId}", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + strangerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(updateDraftRequest("Malicious overwrite", "Should fail")))
+                        .content(updateDraftRequest("Malicious overwrite", "Should fail", 0L)))
                 .andExpect(status().isNotFound());
 
         mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transitionDraftStatusRequest("PUBLISHED")))
+                        .content(transitionDraftStatusRequest("PUBLISHED", 0L)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
     }
@@ -157,20 +165,97 @@ class DraftHttpIntegrationTest {
         mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transitionDraftStatusRequest("PENDING_REVIEW")))
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 0L)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(transitionDraftStatusRequest("PUBLISHED")))
+                        .content(transitionDraftStatusRequest("PUBLISHED", 1L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
 
         mockMvc.perform(delete("/api/content/drafts/{draftId}", draftId)
+                        .queryParam("expectedVersion", "2")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void should_reject_content_updates_for_frozen_states() throws Exception {
+        String accessToken = registerAndLogin("frozen", "frozen@mozhi.dev", "Secret123!", "Frozen");
+        DraftSnapshot draftSnapshot = createDraft(accessToken, "Frozen draft", "Body");
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 0L)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/content/drafts/{draftId}", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateDraftRequest("Should reject", "Frozen body", 1L)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void should_return_conflict_for_stale_mutations() throws Exception {
+        String accessToken = registerAndLogin("versioned", "versioned@mozhi.dev", "Secret123!", "Versioned");
+        DraftSnapshot draftSnapshot = createDraft(accessToken, "Versioned draft", "Body");
+
+        mockMvc.perform(put("/api/content/drafts/{draftId}", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateDraftRequest("Fresh write", "Fresh body", 0L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.version").value(1));
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", draftSnapshot.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 0L)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("A0409"));
+
+        mockMvc.perform(delete("/api/content/drafts/{draftId}", draftSnapshot.draftId())
+                        .queryParam("expectedVersion", "0")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("A0409"));
+    }
+
+    @Test
+    void should_page_and_filter_draft_list() throws Exception {
+        String accessToken = registerAndLogin("pager", "pager@mozhi.dev", "Secret123!", "Pager");
+        createDraft(accessToken, "draft-1", "body-1");
+        DraftSnapshot filteredDraft = createDraft(accessToken, "draft-2", "body-2");
+
+        mockMvc.perform(post("/api/content/drafts/{draftId}/status", filteredDraft.draftId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(transitionDraftStatusRequest("PENDING_REVIEW", 0L)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/content/drafts")
+                        .queryParam("page", "1")
+                        .queryParam("pageSize", "1")
+                        .queryParam("status", "PENDING_REVIEW")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.pageSize").value(1))
+                .andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.items[0].status").value("PENDING_REVIEW"));
+    }
+
+    @Test
+    void should_require_authentication_for_draft_endpoints() throws Exception {
+        mockMvc.perform(get("/api/content/drafts"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("A0401"));
     }
 
     private void deleteIfExists(String tableName) {
@@ -207,6 +292,17 @@ class DraftHttpIntegrationTest {
         return data.path("draftId").asLong();
     }
 
+    private DraftSnapshot createDraft(String accessToken, String title, String content) throws Exception {
+        MvcResult createResult = mockMvc.perform(post("/api/content/drafts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDraftRequest(title, content)))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode data = objectMapper.readTree(createResult.getResponse().getContentAsString()).path("data");
+        return new DraftSnapshot(data.path("draftId").asLong(), data.path("version").asLong());
+    }
+
     private String registerRequest(String username, String email, String password, String nickname) {
         return String.format(
                 "{\"username\":\"%s\",\"email\":\"%s\",\"password\":\"%s\",\"nickname\":\"%s\"}",
@@ -233,14 +329,23 @@ class DraftHttpIntegrationTest {
         );
     }
 
-    private String updateDraftRequest(String title, String content) {
-        return createDraftRequest(title, content);
+    private String updateDraftRequest(String title, String content, long expectedVersion) {
+        return String.format(
+                "{\"title\":\"%s\",\"content\":\"%s\",\"expectedVersion\":%d}",
+                title,
+                content,
+                expectedVersion
+        );
     }
 
-    private String transitionDraftStatusRequest(String targetStatus) {
+    private String transitionDraftStatusRequest(String targetStatus, long expectedVersion) {
         return String.format(
-                "{\"targetStatus\":\"%s\"}",
-                targetStatus
+                "{\"targetStatus\":\"%s\",\"expectedVersion\":%d}",
+                targetStatus,
+                expectedVersion
         );
+    }
+
+    private record DraftSnapshot(long draftId, long version) {
     }
 }

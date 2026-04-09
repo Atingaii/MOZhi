@@ -3,13 +3,19 @@ package cn.zy.mozhi.trigger.http;
 import cn.zy.mozhi.api.dto.ApiResponse;
 import cn.zy.mozhi.api.dto.DraftCreateRequestDTO;
 import cn.zy.mozhi.api.dto.DraftDetailDTO;
+import cn.zy.mozhi.api.dto.DraftListPageDTO;
 import cn.zy.mozhi.api.dto.DraftStatusTransitionRequestDTO;
 import cn.zy.mozhi.api.dto.DraftSummaryDTO;
 import cn.zy.mozhi.api.dto.DraftUpdateRequestDTO;
 import cn.zy.mozhi.domain.auth.model.valobj.AuthTokenClaims;
 import cn.zy.mozhi.domain.content.model.entity.DraftEntity;
+import cn.zy.mozhi.domain.content.model.valobj.DraftPageResult;
 import cn.zy.mozhi.domain.content.service.DraftDomainService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,12 +24,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/content/drafts")
+@Validated
 @ConditionalOnProperty(name = "mozhi.mybatis.enabled", havingValue = "true", matchIfMissing = true)
 public class DraftController {
 
@@ -45,10 +51,17 @@ public class DraftController {
     }
 
     @GetMapping
-    public ApiResponse<List<DraftSummaryDTO>> listMine(@AuthenticationPrincipal AuthTokenClaims tokenClaims) {
-        return ApiResponse.success(
-                draftDomainService.listMine(tokenClaims.userId()).stream().map(this::toSummaryDTO).toList()
-        );
+    public ApiResponse<DraftListPageDTO> listMine(@AuthenticationPrincipal AuthTokenClaims tokenClaims,
+                                                  @RequestParam(name = "page", defaultValue = "1") @Positive(message = "page must be greater than 0") int page,
+                                                  @RequestParam(name = "pageSize", defaultValue = "20") @Positive(message = "pageSize must be greater than 0") @Max(value = 100, message = "pageSize must be less than or equal to 100") int pageSize,
+                                                  @RequestParam(name = "status", required = false) String status) {
+        DraftPageResult draftPageResult = draftDomainService.listMine(tokenClaims.userId(), page, pageSize, status);
+        return ApiResponse.success(new DraftListPageDTO(
+                draftPageResult.page(),
+                draftPageResult.pageSize(),
+                draftPageResult.total(),
+                draftPageResult.items().stream().map(this::toSummaryDTO).toList()
+        ));
     }
 
     @GetMapping("/{draftId}")
@@ -64,6 +77,7 @@ public class DraftController {
         DraftEntity draftEntity = draftDomainService.updateMine(
                 tokenClaims.userId(),
                 draftId,
+                requestDTO.expectedVersion(),
                 requestDTO.title(),
                 requestDTO.content()
         );
@@ -72,8 +86,9 @@ public class DraftController {
 
     @DeleteMapping("/{draftId}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal AuthTokenClaims tokenClaims,
-                                    @PathVariable("draftId") Long draftId) {
-        draftDomainService.deleteMine(tokenClaims.userId(), draftId);
+                                    @PathVariable("draftId") Long draftId,
+                                    @RequestParam(name = "expectedVersion") @PositiveOrZero(message = "expectedVersion must be greater than or equal to 0") long expectedVersion) {
+        draftDomainService.deleteMine(tokenClaims.userId(), draftId, expectedVersion);
         return ApiResponse.success();
     }
 
@@ -84,7 +99,8 @@ public class DraftController {
         DraftEntity draftEntity = draftDomainService.transitionMineStatus(
                 tokenClaims.userId(),
                 draftId,
-                requestDTO.targetStatus()
+                requestDTO.targetStatus(),
+                requestDTO.expectedVersion()
         );
         return ApiResponse.success(toDetailDTO(draftEntity));
     }
@@ -96,6 +112,7 @@ public class DraftController {
                 draftEntity.getTitle(),
                 draftEntity.getContent(),
                 draftEntity.getStatus().name(),
+                draftEntity.getVersion(),
                 draftEntity.getCreatedAt(),
                 draftEntity.getUpdatedAt()
         );
@@ -106,6 +123,7 @@ public class DraftController {
                 draftEntity.getId(),
                 draftEntity.getTitle(),
                 draftEntity.getStatus().name(),
+                draftEntity.getVersion(),
                 draftEntity.getUpdatedAt()
         );
     }

@@ -16,6 +16,7 @@ public class DraftEntity {
     private final String title;
     private final String content;
     private final DraftStatusEnum status;
+    private final Long version;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -24,6 +25,7 @@ public class DraftEntity {
                        String title,
                        String content,
                        DraftStatusEnum status,
+                       Long version,
                        LocalDateTime createdAt,
                        LocalDateTime updatedAt) {
         this.id = id;
@@ -31,6 +33,7 @@ public class DraftEntity {
         this.title = title;
         this.content = content;
         this.status = status;
+        this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -44,18 +47,21 @@ public class DraftEntity {
                 normalizeTitle(title),
                 normalizeContent(content),
                 DraftStatusEnum.DRAFT,
+                0L,
                 now,
                 now
         );
     }
 
     public DraftEntity withContent(String title, String content) {
+        assertEditableForContentUpdate();
         return new DraftEntity(
                 id,
                 authorId,
                 normalizeTitle(title),
                 normalizeContent(content),
                 status,
+                version + 1,
                 createdAt,
                 LocalDateTime.now()
         );
@@ -71,9 +77,18 @@ public class DraftEntity {
                 title,
                 content,
                 targetStatus,
+                version + 1,
                 createdAt,
                 LocalDateTime.now()
         );
+    }
+
+    private void assertEditableForContentUpdate() {
+        if (status == DraftStatusEnum.PENDING_REVIEW
+                || status == DraftStatusEnum.PUBLISHED
+                || status == DraftStatusEnum.ARCHIVED) {
+            throw new BaseException(ResponseCode.BAD_REQUEST, "draft content is read only in current status");
+        }
     }
 
     public boolean canTransitionTo(DraftStatusEnum targetStatus) {
@@ -150,6 +165,10 @@ public class DraftEntity {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public LocalDateTime getUpdatedAt() {

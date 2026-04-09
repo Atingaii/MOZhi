@@ -49,9 +49,14 @@ class DraftFlywayIntegrationTest {
                 "select count(*) from information_schema.tables where table_name = 'media_ref'",
                 Integer.class
         );
+        Integer draftVersionColumnCount = jdbcTemplate.queryForObject(
+                "select count(*) from information_schema.columns where table_name = 'draft' and column_name = 'version'",
+                Integer.class
+        );
 
         assertThat(draftCount).isEqualTo(1);
         assertThat(noteCount).isEqualTo(1);
         assertThat(mediaRefCount).isEqualTo(1);
+        assertThat(draftVersionColumnCount).isEqualTo(1);
     }
 }

@@ -10,13 +10,14 @@
         <result column="title" property="title"/>
         <result column="content" property="content"/>
         <result column="status" property="status"/>
+        <result column="version" property="version"/>
         <result column="created_at" property="createdAt"/>
         <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
     <insert id="insert" parameterType="cn.zy.mozhi.infrastructure.dao.po.DraftPO" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO `draft` (author_id, title, content, status, created_at, updated_at)
-        VALUES (#{authorId}, #{title}, #{content}, #{status}, #{createdAt}, #{updatedAt})
+        INSERT INTO `draft` (author_id, title, content, status, version, created_at, updated_at)
+        VALUES (#{authorId}, #{title}, #{content}, #{status}, #{version}, #{createdAt}, #{updatedAt})
     </insert>
 
     <update id="update" parameterType="cn.zy.mozhi.infrastructure.dao.po.DraftPO">
@@ -24,25 +25,41 @@
         SET title = #{title},
             content = #{content},
             status = #{status},
+            version = #{version},
             updated_at = #{updatedAt}
         WHERE id = #{id}
+          AND version = #{expectedVersion}
     </update>
 
     <delete id="deleteById">
         DELETE FROM `draft`
         WHERE id = #{id}
+          AND version = #{expectedVersion}
     </delete>
 
     <select id="selectById" resultMap="DraftResultMap">
-        SELECT id, author_id, title, content, status, created_at, updated_at
+        SELECT id, author_id, title, content, status, version, created_at, updated_at
         FROM `draft`
         WHERE id = #{id}
     </select>
 
-    <select id="selectByAuthorId" resultMap="DraftResultMap">
-        SELECT id, author_id, title, content, status, created_at, updated_at
+    <select id="selectPageByAuthorId" resultMap="DraftResultMap">
+        SELECT id, author_id, title, content, status, version, created_at, updated_at
         FROM `draft`
         WHERE author_id = #{authorId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
         ORDER BY updated_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByAuthorId" resultType="long">
+        SELECT COUNT(*)
+        FROM `draft`
+        WHERE author_id = #{authorId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
     </select>
 </mapper>

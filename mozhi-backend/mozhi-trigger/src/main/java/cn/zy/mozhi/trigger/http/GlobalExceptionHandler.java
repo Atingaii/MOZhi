@@ -54,9 +54,10 @@ public class GlobalExceptionHandler {
     private HttpStatus resolveStatus(String errorCode) {
         return switch (errorCode) {
             case "A0401" -> HttpStatus.UNAUTHORIZED;
-            case "A0429" -> HttpStatus.TOO_MANY_REQUESTS;
             case "A0403" -> HttpStatus.FORBIDDEN;
             case "A0404" -> HttpStatus.NOT_FOUND;
+            case "A0409" -> HttpStatus.CONFLICT;
+            case "A0429" -> HttpStatus.TOO_MANY_REQUESTS;
             default -> HttpStatus.BAD_REQUEST;
         };
     }
