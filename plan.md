@@ -88,7 +88,6 @@
 ## Phase 1 · 认证域 + 用户域（第 3～4 周）
 
 ### 目标
-
 实现用户注册、登录、JWT 双令牌认证、令牌刷新与撤销、基础用户信息管理。这是所有业务模块的前置依赖——没有认证，后续所有接口都无法鉴权。
 
 ### Step 1.1 — 用户域：表结构与基础 CRUD（Day 1～2）
@@ -148,11 +147,27 @@
 
 **怎么测试**：创建草稿 → 查询草稿列表 → 更新草稿内容 → 删除草稿。验证状态流转：只能按合法路径推进，非法状态跳转被拒绝。
 
-### Step 2.2 — 存储域：MinIO 预签名直传完整链路（Day 3～4）
+### Step 2.2 — 存储域：通用预签名直传与草稿媒体绑定（Day 3～4）
 
-**做什么**：实现通用的预签名上传接口 `POST /api/storage/presign`（传入文件名、Content-Type → 返回预签名 URL + objectKey）。实现上传确认接口 `POST /api/storage/confirm`（后端 HEAD 请求 MinIO 验证对象存在 → 关联到 draft 的 media_ref）。草稿关联多个媒体文件。
+**做什么**：实现通用存储预签名接口 `POST /api/storage/presign`，由后端统一生成 `uploadTicket`、上传 URL、`provider / bucket / objectKey` 等存储定位信息。上传确认不再走独立的存储确认接口，而是由内容域草稿媒体绑定接口 `POST /api/content/drafts/{draftId}/media/confirm` 完成：后端先验票，再对对象存储做元数据探测，校验对象存在、`content-type`、字节数、`etag` 等信息后，将媒体写入 `media_ref`。`media_ref` 需要具备 `storage_provider / bucket_name / object_key / file_name / size_bytes / etag / upload_status / bound_at` 等可扩展字段，为后续接入 OSS / S3 / COS / CDN 保留统一抽象。
 
-**怎么测试**：获取预签名 URL → 用 curl 或前端直传一张图片 → 确认接口校验通过 → 草稿的媒体列表中可查到该文件。上传一个超大文件 → 验证 MinIO 的限制是否生效。上传非法 Content-Type → 被拒绝。
+**当前这一步覆盖的真实场景**：
+- 对象路径由后端统一生成，格式类似 `drafts/{userId}/{draftId}/{yyyyMMdd}/{uuid}.{ext}`，客户端不能自定义存储前缀，避免路径污染和越权写入。
+- 预签名票据是“带上下文的上传授权”，会绑定 `userId / draftId / purpose / mediaType / contentType / declaredSizeBytes / provider / bucket / objectKey`，而不是裸 URL。
+- 确认阶段不信任客户端“上传成功”的口头声明，而是由后端主动探测对象存储，核对存在性和元数据后再入库。
+- 只有当前用户自己的、且仍可写的草稿允许申请上传和确认绑定；冻结态草稿禁止继续绑媒体，保持内容写模型一致性。
+- 同一个对象重复确认要幂等；如果对象已经被其他草稿或其他用户绑定，需要拒绝脏绑定。
+- 业务表不能只存 `publicUrl`，而是保留 `provider + bucket + objectKey + metadata` 作为稳定事实，方便后续做 CDN 域名切换、回源、去重、审核和发布冻结。
+- 当前 provider 以 Local Mock / MinIO 为主，但领域和接口契约已保持通用，后续接阿里云 OSS、腾讯 COS、AWS S3 时只需要补基础设施适配层。
+
+**怎么测试**：创建草稿 → 请求预签名票据 → 用 curl 或前端直传对象 → 调用草稿媒体确认接口 → 查询草稿媒体列表，验证 `upload_status=CONFIRMED`。另外验证：非法 `content-type` 被拒绝；篡改的 `uploadTicket` 被拒绝；非本人草稿返回 `404`；冻结态草稿不能确认；重复确认同一对象保持幂等。
+
+**后续增强（写入计划，当前不阻塞主线）**：
+- 未确认对象清理：定时扫描长期停留在 `PRESIGNED` 的对象和记录，自动清理桶内垃圾文件与过期票据。
+- 媒体安全处理：接入病毒扫描、内容安全审核、图片/附件风控状态流转。
+- 大文件与视频：支持 multipart / 分片上传、断点续传、异步合并与失败重试。
+- 媒体处理流水线：图片压缩、缩略图生成、格式转换、视频转码与封面抽帧。
+- CDN / OSS 演进：provider 扩展到 OSS / S3 / COS，`publicUrl` 切换 CDN 域名，必要时补签名下载、回源和缓存策略。
 
 ### Step 2.3 — 内容域：发布流程与 Kafka 事件（Day 5～6）
 
