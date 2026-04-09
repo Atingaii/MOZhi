@@ -34,7 +34,7 @@ public class LocalStoragePresignPortImpl implements IStoragePresignPort {
                 URLEncoder.encode(contentType, StandardCharsets.UTF_8),
                 expiresAt.getEpochSecond()
         );
-        return new StoragePresignedUpload(objectKey, uploadUrl, publicUrl, HTTP_METHOD, expiresAt);
+        return new StoragePresignedUpload(objectKey, uploadUrl, publicUrl, HTTP_METHOD, null, "LOCAL", "mozhi-assets", expiresAt);
     }
 
     @Override

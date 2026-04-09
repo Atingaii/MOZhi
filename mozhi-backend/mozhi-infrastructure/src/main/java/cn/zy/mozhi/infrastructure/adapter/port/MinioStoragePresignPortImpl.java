@@ -45,7 +45,7 @@ public class MinioStoragePresignPortImpl implements IStoragePresignPort {
                             .build()
             );
             String publicUrl = resolvePublicUrl(objectKey);
-            return new StoragePresignedUpload(objectKey, uploadUrl, publicUrl, HTTP_METHOD, expiresAt);
+            return new StoragePresignedUpload(objectKey, uploadUrl, publicUrl, HTTP_METHOD, null, "MINIO", bucket, expiresAt);
         } catch (Exception exception) {
             throw new IllegalStateException("failed to presign upload url", exception);
         }
