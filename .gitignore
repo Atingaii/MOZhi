@@ -7,6 +7,7 @@
 /mozhi-web/*.tsbuildinfo
 /mozhi-backend/**/target/
 /logs/
+.worktrees/
 *.iml
 *.log
 .env
